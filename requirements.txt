@@ -1,0 +1,12 @@
+# verfied to work for Python 3.7.13
+numpy
+pandas
+sklearn
+tempeh
+matplotlib
+tensorflow==1.15.5
+protobuf==3.20.0
+fairlearn
+cvxpy
+aif360==0.4.0
+seaborn
