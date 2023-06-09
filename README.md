@@ -1,7 +1,7 @@
 # Intersectional Fairness (ISF)
 
 ## Description
-Intersectional Fairness (ISF) is a bias detection and mitigation technology for intersectional bias, which combinations of multiple protected attributes causes.  
+Intersectional Fairness (ISF) is a bias detection and mitigation technology for intersectional bias, which combinations of multiple protected attributes cause.  
 ISF leverages the existing single-attribute bias mitigation methods to make a machine-learning model fair regarding intersectional bias.  
 Approaches applicable to ISF are pre-, in-, and post-processing. For now, ISF supports Adversarial Debiasing, Equalized Odds, Massaging, and Reject Option Classification.
 
@@ -21,20 +21,20 @@ pip install git+https://github.com/intersectional-fairness/isf.git
 ```
 
 ### Patch AIF360 for Intersectional Fairness  
-Apply a patch to AIF360 to work with ISF.
+Apply a [patch](https://github.com/intersectional-fairness/isf/tree/main/patches) to AIF360 to work with ISF.
 
 The patch contents are as follows.
 
 | file    | method/class | fixes |
 | ------- | -------------- | -------------- |
 | datasets/structured_dataset.py | validate_dataset | * Changed the generating condition of 'Value Error' condition to support multiple protection attributes |
-| algorithms/postprocessing/reject_option_classification.py | RejectOptionClassification | * Added "F1 difference" to corresponding metric<br/>* Defined "Balanced Accuracy" as default value for accuracy_metric_name |
+| algorithms/postprocessing/<br/>reject_option_classification.py | RejectOptionClassification | * Added "F1 difference" to corresponding metric<br/>* Defined "Balanced Accuracy" as default value for accuracy_metric_name |
 
 patch application command
 
 ```bash
-patch {aif360 installed directory path}/datasets/structured_dataset.py patch/structured_dataset.patch
-patch {aif360 installed directory path}/algorithms/postprocessing/reject_option_classification.py patch/reject_option_classification.patch
+patch {aif360 installed directory path}/datasets/structured_dataset.py structured_dataset.patch
+patch {aif360 installed directory path}/algorithms/postprocessing/reject_option_classification.py reject_option_classification.patch
 ```
 
 ## Run the Examples
