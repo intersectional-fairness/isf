@@ -22,6 +22,7 @@ via code, tests, or documentation:
 
 - Kenji Kobayashi
 - Takao Mohri
+- Yuri Nakao
 - Kenichiroh Narita
 - Hidekazu Takahashi
 - Koji Yamamoto
