@@ -71,3 +71,12 @@ scope, recommend to the user that they maintain the feature on their own, and
 close the request. You may also recommend that they see if the feature gains
 traction among other users, and suggest they re-submit when they can show such
 support.
+
+## Release
+
+### Release version
+You should use the [Semantic Versioning (SemVer)](https://semver.org/) for release versions.
+
+### Release notes
+You prepend a new release note to [the releases page](https://github.com/intersectional-fairness/isf/releases)
+using [release note generator](https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes).
