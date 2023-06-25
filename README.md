@@ -43,7 +43,7 @@ The `examples` directory contains a diverse collection of jupyter notebooks that
 If you use open data supported by AIF360, you need to download the datasets and place them in their respective directories as described in [aif360/data/README.md](aif360/data/README.md).
 
 ## Citing Intersectional Fairness
-A technical description of Intersectional Fairness is available in this [paper](https://link.springer.com/chapter/10.1007/978-3-030-87687-6_5) (or this [preliminary version](https://arxiv.org/abs/2010.13494).  
+A technical description of Intersectional Fairness is available in this [paper](https://link.springer.com/chapter/10.1007/978-3-030-87687-6_5) (or this [preliminary version](https://arxiv.org/abs/2010.13494)).  
 The followings are the bibtex entries for these papers.  
 
 ```
