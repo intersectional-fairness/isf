@@ -43,10 +43,19 @@ The `examples` directory contains a diverse collection of jupyter notebooks that
 If you use open data supported by AIF360, you need to download the datasets and place them in their respective directories as described in [aif360/data/README.md](aif360/data/README.md).
 
 ## Citing Intersectional Fairness
-A technical description of Intersectional Fairness is available in this [paper](https://arxiv.org/abs/2010.13494).  
-Below is the bibtex entry for this paper.  
+A technical description of Intersectional Fairness is available in this [paper] (or this [preliminary version](https://arxiv.org/abs/2010.13494).  
+The followings are the bibtex entries for these papers.  
 
 ```
+@InProceedings{Kobayashi2021-tf,
+      title={{One-vs.-One} Mitigation of Intersectional Bias: A General Method for Extending {Fairness-Aware} Binary Classification},
+      booktitle={New Trends in Disruptive Technologies, Tech Ethics andArtificial Intelligence},
+      author={Kenji Kobayashi and Yuri Nakao},
+      publisher={Springer International Publishing},
+      pages={43--54},
+      year={2021},
+      conference={DiTTEt 2021}
+}
 @misc{kobayashi2020onevsone,
       title={One-vs.-One Mitigation of Intersectional Bias: A General Method to Extend Fairness-Aware Binary Classification},
       author={Kenji Kobayashi and Yuri Nakao},
