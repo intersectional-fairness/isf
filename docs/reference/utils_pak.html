@@ -1,0 +1,236 @@
+
+<!DOCTYPE html>
+
+<html lang="jp">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>isf.utils.common &#8212; Intersectional Fairness v0.1.0
+ documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/nature.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="isf.metrics.disparate_impact" href="metrics_pak.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="metrics_pak.html" title="isf.metrics.disparate_impact"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Intersectional Fairness v0.1.0
+ documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">isf.utils.common</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="module-isf.utils.common">
+<span id="isf-utils-common"></span><h1>isf.utils.common<a class="headerlink" href="#module-isf.utils.common" title="Permalink to this heading">¶</a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="isf.utils.common.classify">
+<span class="sig-prename descclassname"><span class="pre">isf.utils.common.</span></span><span class="sig-name descname"><span class="pre">classify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset_train</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_test</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">algorithm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'LR'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/isf/utils/common.html#classify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#isf.utils.common.classify" title="Permalink to this definition">¶</a></dt>
+<dd><p>Predict with LogisticRegression or RandomForest model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataset_train</strong> (<em>StructuredDataset</em>) -- Dataset for training</p></li>
+<li><p><strong>dataset_test</strong> (<em>StructuredDataset</em>) -- Dataset for evaluation</p></li>
+<li><p><strong>algorithm</strong> (<em>str</em><em>, </em><em>optional</em>) -- Classification algorithm
+['LR','RF']</p></li>
+<li><p><strong>threshold</strong> (<em>float</em><em>, </em><em>optional</em>) -- Threshold for determining predicted labels</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>dataset_test_pred</strong> (<em>StructuredDataset</em>) -- Prediction dataset</p></li>
+<li><p><strong>best_class_thresh</strong> (<em>float</em>) -- Threshold for determining predicted labels</p></li>
+<li><p><strong>best_accuracy</strong> (<em>float</em>) -- Accuracy when searching for threshold</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="isf.utils.common.convert_labels">
+<span class="sig-prename descclassname"><span class="pre">isf.utils.common.</span></span><span class="sig-name descname"><span class="pre">convert_labels</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ds</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">conversion_pattern</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/isf/utils/common.html#convert_labels"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#isf.utils.common.convert_labels" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert label value to 1/-1, 1.0/0.0</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ds</strong> (<em>StandardDataset</em>) -- Dataset containing labels</p></li>
+<li><p><strong>conversion_pattern</strong> (<em>str</em>) -- Select conversion pattern
+'MA': 1/-1, None: 1.0/0.0
+['MA', None]</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="isf.utils.common.create_multi_group_label">
+<span class="sig-prename descclassname"><span class="pre">isf.utils.common.</span></span><span class="sig-name descname"><span class="pre">create_multi_group_label</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/isf/utils/common.html#create_multi_group_label"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#isf.utils.common.create_multi_group_label" title="Permalink to this definition">¶</a></dt>
+<dd><p>Combine sensitive attributes and attribute values to create group label</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>dataset</strong> (<em>StandardDataset</em>) -- Dataset containing sensitive attribute</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>combinataion_label</strong> (<em>list</em>) -- Group label</p></li>
+<li><p><strong>combinataion_label_shape</strong> (<em>list</em>) -- Group label shape</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="isf.utils.common.decision_label">
+<span class="sig-prename descclassname"><span class="pre">isf.utils.common.</span></span><span class="sig-name descname"><span class="pre">decision_label</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset_test_pred</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_test</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metric</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Balanced</span> <span class="pre">accuracy'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/isf/utils/common.html#decision_label"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#isf.utils.common.decision_label" title="Permalink to this definition">¶</a></dt>
+<dd><p>Determine prediction labels from prediction scores</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataset_test_pred</strong> (<em>StructuredDataset</em>) -- Dataset containing prediction</p></li>
+<li><p><strong>dataset_test</strong> (<em>StructuredDataset</em>) -- Dataset containing ground-truth labels.</p></li>
+<li><p><strong>metric</strong> (<em>str</em>) -- Accuracy metric for determining threshold
+['Balanced accuracy', F1]</p></li>
+<li><p><strong>threshold</strong> (<em>float</em>) -- Threshold for determining predicted labels</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>dataset_test_pred</strong> (<em>StructuredDataset</em>) -- Dataset containing prediction</p></li>
+<li><p><strong>threshold</strong> (<em>float</em>) -- Threshold for determining predicted labels</p></li>
+<li><p><strong>best_accuracy</strong> (<em>float</em>) -- Accuracy when searching for threshold</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If threshold is None, perform parameter search for threshold</p>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="isf.utils.common.get_baseline">
+<span class="sig-prename descclassname"><span class="pre">isf.utils.common.</span></span><span class="sig-name descname"><span class="pre">get_baseline</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scores</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/isf/utils/common.html#get_baseline"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#isf.utils.common.get_baseline" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate Accuracy When Searching for Threshold</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>scores</strong> (<em>list</em>) -- Prediction score</p></li>
+<li><p><strong>y</strong> (<em>list</em>) -- True label</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>best_accuracy</strong> -- Accuracy</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="isf.utils.common.output_subgroup_metrics">
+<span class="sig-prename descclassname"><span class="pre">isf.utils.common.</span></span><span class="sig-name descname"><span class="pre">output_subgroup_metrics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset_act</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_pred</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">protected_attributes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_file_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_group</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/isf/utils/common.html#output_subgroup_metrics"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#isf.utils.common.output_subgroup_metrics" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate classification metrics by combining sensitive attributes</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataset_act</strong> (<em>StructuredDataset</em>) -- Dataset containing ground-truth labels.</p></li>
+<li><p><strong>dataset_pred</strong> (<em>StructuredDataset</em>) -- Dataset containing prediction</p></li>
+<li><p><strong>protected_attributes</strong> (<em>list</em>) -- Combining Sensitive Attributes and Attribute Values(group)</p></li>
+<li><p><strong>out_file_path</strong> (<em>str</em><em>, </em><em>optional</em>) -- Save path for classification performance</p></li>
+<li><p><strong>out_group</strong> (<em>boolean</em>) -- Also compute df_group_metrics</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>df_group_metrics</strong> (<em>DataFrame</em>) -- Classification performance(for each sensitive attribute)</p></li>
+<li><p><strong>df_subgroup_metrics</strong> (<em>DataFrame</em>) -- Classification performance(for combining sensitive attributes)</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="metrics_pak.html"
+                          title="previous chapter">isf.metrics.disparate_impact</a></p>
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/utils_pak.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="metrics_pak.html" title="isf.metrics.disparate_impact"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Intersectional Fairness v0.1.0
+ documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">isf.utils.common</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2023, Fujitsu Limited.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.1.1.
+    </div>
+  </body>
+</html>

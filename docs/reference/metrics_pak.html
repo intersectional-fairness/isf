@@ -1,0 +1,214 @@
+
+<!DOCTYPE html>
+
+<html lang="jp">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>isf.metrics.disparate_impact &#8212; Intersectional Fairness v0.1.0
+ documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/nature.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="isf.utils.common" href="utils_pak.html" />
+    <link rel="prev" title="isf.core.intersectional_fairness" href="core_pak.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="utils_pak.html" title="isf.utils.common"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="core_pak.html" title="isf.core.intersectional_fairness"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Intersectional Fairness v0.1.0
+ documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">isf.metrics.disparate_impact</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="module-isf.metrics.disparate_impact">
+<span id="isf-metrics-disparate-impact"></span><h1>isf.metrics.disparate_impact<a class="headerlink" href="#module-isf.metrics.disparate_impact" title="Permalink to this heading">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="isf.metrics.disparate_impact.DisparateImpact">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">isf.metrics.disparate_impact.</span></span><span class="sig-name descname"><span class="pre">DisparateImpact</span></span><a class="reference internal" href="_modules/isf/metrics/disparate_impact.html#DisparateImpact"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#isf.metrics.disparate_impact.DisparateImpact" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Calculate Disparate Impact score</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="isf.metrics.disparate_impact.DisparateImpact.bias_predict">
+<span class="sig-name descname"><span class="pre">bias_predict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">protected_attr_info</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_info</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/isf/metrics/disparate_impact.html#DisparateImpact.bias_predict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#isf.metrics.disparate_impact.DisparateImpact.bias_predict" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="isf.metrics.disparate_impact.DisparateImpact.calc_di">
+<span class="sig-name descname"><span class="pre">calc_di</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">protected_attr_info</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_info</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/isf/metrics/disparate_impact.html#DisparateImpact.calc_di"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#isf.metrics.disparate_impact.DisparateImpact.calc_di" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate Disparate Impact score</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> (<em>DataFrame</em>) -- DataFrame containing sensitive attributes and label</p></li>
+<li><p><strong>sensitive</strong> (<em>dictionary</em>) -- Privileged group (sensitive attribute name : attribute value)
+e.g. {'Gender':1.0,'Race':'black'}</p></li>
+<li><p><strong>label_info</strong> (<em>dictionary</em>) -- Label definition (label attribute name : attribute values)
+e.g. {'denied':1.0}</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>return value</strong> -- Disparete Impact score</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="isf.metrics.disparate_impact.DisparateImpact.calc_di_attribute">
+<span class="sig-name descname"><span class="pre">calc_di_attribute</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">protected_attr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_info</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/isf/metrics/disparate_impact.html#DisparateImpact.calc_di_attribute"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#isf.metrics.disparate_impact.DisparateImpact.calc_di_attribute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify sensitive attribute name and calculate disparete impact score for each attribute value</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> (<em>DataFrame</em>) -- DataFrame containing sensitive attribute and label</p></li>
+<li><p><strong>protected_attr</strong> (<em>str</em>) -- Sensitive attribute name
+e.g. 'female'</p></li>
+<li><p><strong>label_info</strong> (<em>dictionary</em>) -- Label definition (label attribute name : attribute values)
+e.g. {'denied':1.0}</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>dic_di</strong> -- {attribute value: Disparete Impact score, ...}</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dictionary</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="isf.metrics.disparate_impact.DisparateImpact.calc_privilege_group">
+<span class="sig-name descname"><span class="pre">calc_privilege_group</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">protected_attr_info</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/isf/metrics/disparate_impact.html#DisparateImpact.calc_privilege_group"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#isf.metrics.disparate_impact.DisparateImpact.calc_privilege_group" title="Permalink to this definition">¶</a></dt>
+<dd><p>Split into privileged and non-privileged groups</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> (<em>DataFrame</em>) -- DataFrame containing sensitive attribute and label</p></li>
+<li><p><strong>protected_attr_info</strong> (<em>dictionary</em>) -- Privileged group definition (sensitive attribute name : attribute values)
+e.g. {'female':1.0}</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>privilege_group</strong> (<em>DataFrame</em>) -- Privileged group</p></li>
+<li><p><strong>non_privilege_group</strong> (<em>DataFrame</em>) -- Non-privileged group</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="isf.metrics.disparate_impact.DisparateImpact.plot_di_attribute">
+<span class="sig-name descname"><span class="pre">plot_di_attribute</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dic_di</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_attr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/isf/metrics/disparate_impact.html#DisparateImpact.plot_di_attribute"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#isf.metrics.disparate_impact.DisparateImpact.plot_di_attribute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Draw the disparete impact score in a bar chart</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dic_di</strong> (<em>dictionary</em>) -- Disparete impact score
+{attribute value: disparete impact score, ...}</p></li>
+<li><p><strong>target_attr</strong> (<em>str</em>) -- Sensitive attribute name
+e.g. 'female'</p></li>
+<li><p><strong>filename</strong> (<em>str</em><em>, </em><em>optional</em>) -- File name(png)
+e.g. './result/pict.png'</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="core_pak.html"
+                          title="previous chapter">isf.core.intersectional_fairness</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="utils_pak.html"
+                          title="next chapter">isf.utils.common</a></p>
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/metrics_pak.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="utils_pak.html" title="isf.utils.common"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="core_pak.html" title="isf.core.intersectional_fairness"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Intersectional Fairness v0.1.0
+ documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">isf.metrics.disparate_impact</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2023, Fujitsu Limited.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.1.1.
+    </div>
+  </body>
+</html>

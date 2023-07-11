@@ -1,0 +1,8 @@
+isf.core.intersectional_fairness
+================================
+
+.. automodule:: isf.core.intersectional_fairness
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   

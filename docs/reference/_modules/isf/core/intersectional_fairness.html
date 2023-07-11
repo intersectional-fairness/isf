@@ -1,0 +1,1100 @@
+
+<!DOCTYPE html>
+
+<html lang="jp">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>isf.core.intersectional_fairness &#8212; Intersectional Fairness v0.1.0
+ documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/nature.css" />
+    <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">Intersectional Fairness v0.1.0
+ documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">isf.core.intersectional_fairness</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for isf.core.intersectional_fairness</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright 2023 Fujitsu Limited</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">import</span> <span class="nn">collections</span> <span class="k">as</span> <span class="nn">cl</span>
+<span class="kn">import</span> <span class="nn">traceback</span>
+<span class="kn">import</span> <span class="nn">concurrent.futures</span>
+
+<span class="kn">from</span> <span class="nn">aif360.datasets</span> <span class="kn">import</span> <span class="n">StructuredDataset</span>
+<span class="kn">from</span> <span class="nn">aif360.datasets</span> <span class="kn">import</span> <span class="n">BinaryLabelDataset</span>
+<span class="kn">from</span> <span class="nn">aif360.metrics</span> <span class="kn">import</span> <span class="n">BinaryLabelDatasetMetric</span>
+<span class="kn">from</span> <span class="nn">aif360.metrics</span> <span class="kn">import</span> <span class="n">ClassificationMetric</span>
+
+<span class="kn">from</span> <span class="nn">isf.utils</span> <span class="kn">import</span> <span class="n">const</span>
+<span class="kn">from</span> <span class="nn">isf.utils.common</span> <span class="kn">import</span> <span class="n">create_multi_group_label</span>
+<span class="kn">from</span> <span class="nn">isf.algorithms.base.preprocessing</span> <span class="kn">import</span> <span class="n">PreProcessing</span>
+<span class="kn">from</span> <span class="nn">isf.algorithms.base.inprocessing</span> <span class="kn">import</span> <span class="n">InProcessing</span>
+<span class="kn">from</span> <span class="nn">isf.algorithms.base.postprocessing</span> <span class="kn">import</span> <span class="n">PostProcessing</span>
+
+<span class="kn">from</span> <span class="nn">isf.algorithms.massaging</span> <span class="kn">import</span> <span class="n">Massaging</span>
+<span class="kn">from</span> <span class="nn">isf.algorithms.adversarial_debiasing</span> <span class="kn">import</span> <span class="n">AdversarialDebiasing</span>
+<span class="kn">from</span> <span class="nn">isf.algorithms.reject_option_based_classification</span> <span class="kn">import</span> <span class="n">RejectOptionClassification</span>
+<span class="kn">from</span> <span class="nn">isf.algorithms.equalized_odds_postprocessing</span> <span class="kn">import</span> <span class="n">EqualizedOddsPostProcessing</span>
+
+<span class="kn">from</span> <span class="nn">logging</span> <span class="kn">import</span> <span class="n">getLogger</span><span class="p">,</span> <span class="n">StreamHandler</span><span class="p">,</span> <span class="n">ERROR</span><span class="p">,</span> <span class="n">Formatter</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">aif360.datasets.structured_dataset</span> <span class="kn">import</span> <span class="n">replacement_check</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">traceback</span><span class="o">.</span><span class="n">format_exc</span><span class="p">())</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Please replace the referenced aif360 structured_dataset.py as shown in the following command.&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">$ patch {aif360 installed directory}/datasets/structured_dataset.py patches/structured_dataset.patch</span><span class="se">\n\n</span><span class="s1">or&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">$ cp patches/structured_dataset.py {aif360 installed directory}/datasets/</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">exit</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="IntersectionalFairness"><a class="viewcode-back" href="../../../core_pak.html#isf.core.intersectional_fairness.IntersectionalFairness">[docs]</a><span class="k">class</span> <span class="nc">IntersectionalFairness</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Mitigate intersectional-bias caused by combining multiple sensitive attributes.</span>
+<span class="sd">    Apply bias mitigation techniques to subgroups divided by sensitive attributes, and prioritize those with high mitigation effects in fairness metrics.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    algorithm : str</span>
+<span class="sd">        Bias mitigation technique</span>
+<span class="sd">        {&#39;AdversarialDebiasing&#39;, &#39;RejectOptionClassification&#39;, &#39;Massaging&#39;, &#39;EqualizedOddsPostProcessing&#39;}</span>
+
+<span class="sd">    metric : str</span>
+<span class="sd">        Fairness metrics</span>
+<span class="sd">        {&#39;DemographicParity&#39;, &#39;EqualOpportunity&#39;, &#39;EqualizedOdds&#39;, &#39;F1Parity&#39;}</span>
+
+<span class="sd">    accuracy_metric : str</span>
+<span class="sd">        Accuracy metric</span>
+<span class="sd">        {&#39;Balanced Accuracy&#39;, &#39;F1&#39;}</span>
+
+<span class="sd">    upper_limit_disparity : float</span>
+<span class="sd">        Inequality target</span>
+
+<span class="sd">    debiasing_conditions : list(dictionary)</span>
+<span class="sd">        Conditions for bias mitigation</span>
+<span class="sd">        (Enabled when instruct_debiasing=True)</span>
+<span class="sd">            {&#39;target_attrs&#39;: priority condition for bias mitigation,</span>
+<span class="sd">             &#39;uld_a&#39;: lower target value for bias mitigation,</span>
+<span class="sd">             &#39;uld_b&#39;: upper target value of bias mitigation,</span>
+<span class="sd">             &#39;probability&#39;: relabeling rate}</span>
+
+<span class="sd">        example.</span>
+<span class="sd">        [{&#39;target_attrs&#39;:{&#39;non_white&#39;: 1.0, &#39;Gender&#39;: 0.0}, &#39;uld_a&#39;: 0.8, &#39;uld_b&#39;:1.2, &#39;probability&#39;:1.0}]</span>
+
+<span class="sd">    upper_limit_disparity_type : str</span>
+<span class="sd">        Fairness metric calculation method</span>
+<span class="sd">        &#39;difference&#39;: difference between privileged and non-privileged attributes</span>
+<span class="sd">        &#39;ratio&#39;: Ratio of privileged and non-privileged attributes</span>
+<span class="sd">        [&#39;difference&#39;, &#39;ratio&#39;]</span>
+
+<span class="sd">    instruct_debiasing : boolean</span>
+<span class="sd">        Specify targets for bias mitigation</span>
+
+<span class="sd">    max_workers : int, optional</span>
+<span class="sd">        Number of parallelisms for bias mitigation</span>
+
+<span class="sd">    options : dictionary, optional</span>
+<span class="sd">        Bias reduction algorithm option</span>
+<span class="sd">        Refer to the API of the specified algorithm for details</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    By setting instruct_debiasing=True, you can specify a combination of sensitive attributes to mitigate bias.</span>
+<span class="sd">    If False, the bias mitigation evenly</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">algorithm</span><span class="p">,</span> <span class="n">metric</span><span class="p">,</span> <span class="n">accuracy_metric</span><span class="o">=</span><span class="s1">&#39;Balanced Accuracy&#39;</span><span class="p">,</span> <span class="n">upper_limit_disparity</span><span class="o">=</span><span class="mf">0.03</span><span class="p">,</span>
+                 <span class="n">debiasing_conditions</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">instruct_debiasing</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                 <span class="n">upper_limit_disparity_type</span><span class="o">=</span><span class="s1">&#39;difference&#39;</span><span class="p">,</span> <span class="n">max_workers</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="p">{}):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">algorithm</span> <span class="o">=</span> <span class="n">algorithm</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">options</span> <span class="o">=</span> <span class="n">options</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="s1">&#39;metric&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">metric</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="s1">&#39;threshold&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">algo</span> <span class="o">=</span> <span class="nb">globals</span><span class="p">()[</span><span class="bp">self</span><span class="o">.</span><span class="n">algorithm</span><span class="p">](</span><span class="n">options</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">algo</span><span class="p">,</span> <span class="n">PreProcessing</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">approach_type</span> <span class="o">=</span> <span class="s1">&#39;PreProcessing&#39;</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">algo</span><span class="p">,</span> <span class="n">InProcessing</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">approach_type</span> <span class="o">=</span> <span class="s1">&#39;InProcessing&#39;</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">algo</span><span class="p">,</span> <span class="n">PostProcessing</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">approach_type</span> <span class="o">=</span> <span class="s1">&#39;PostProcessing&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">metric</span> <span class="o">=</span> <span class="n">metric</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">instruct_debiasing</span> <span class="o">=</span> <span class="n">instruct_debiasing</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">instruct_debiasing</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="c1"># Convert bias mitigation priority definition to dataframe</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">debiasing_conditions_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_convert_to_dataframe_from_debiasing_conditions</span><span class="p">(</span><span class="n">debiasing_conditions</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">upper_limit_disparity</span> <span class="o">=</span> <span class="n">upper_limit_disparity</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">upper_limit_disparity_type</span> <span class="o">=</span> <span class="n">upper_limit_disparity_type</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">models</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">graph_sort_label</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># Graph item name unification list</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pair_metric_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">group_protected_attrs</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">skip_mode</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ds_dir</span> <span class="o">=</span> <span class="s1">&#39;tmp/&#39;</span>  <span class="c1"># storage directory for intermediate results</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">dataset_actual</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dataset_valid</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dataset_predicted</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">enable_fit</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">MAX_WORKERS</span> <span class="o">=</span> <span class="n">max_workers</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dfst_all</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scores</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Score of all instances for debugging</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">accuracy_metric</span> <span class="o">=</span> <span class="n">accuracy_metric</span>
+
+        <span class="n">allowed_accuracy_metrics</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Balanced Accuracy&#39;</span><span class="p">,</span> <span class="s1">&#39;F1&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">accuracy_metric</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">allowed_accuracy_metrics</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;accuracy metric name not in the list of allowed metrics&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span> <span class="o">=</span> <span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+        <span class="n">handler</span> <span class="o">=</span> <span class="n">StreamHandler</span><span class="p">()</span>
+        <span class="n">handler</span><span class="o">.</span><span class="n">setFormatter</span><span class="p">(</span><span class="n">Formatter</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%(asctime)s</span><span class="s2"> [</span><span class="si">%(levelname)s</span><span class="s2">] </span><span class="si">%(message)s</span><span class="s2">&quot;</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">handler</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">ERROR</span><span class="p">)</span>
+
+<div class="viewcode-block" id="IntersectionalFairness.fit"><a class="viewcode-back" href="../../../core_pak.html#isf.core.intersectional_fairness.IntersectionalFairness.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_actual</span><span class="p">,</span> <span class="n">dataset_predicted</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dataset_valid</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="p">{}):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Learns the fair classifier.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataset_actual : StructuredDataset</span>
+<span class="sd">            Dataset for input to the model</span>
+<span class="sd">            Enabled when PreProcessing, InProcessing algorithm is selected</span>
+<span class="sd">        dataset_predicted : StructuredDataset</span>
+<span class="sd">            Dataset of model prediction</span>
+<span class="sd">            Enabled when PostProcessing algorithm is selected</span>
+<span class="sd">        dataset_valid : StructuredDataset</span>
+<span class="sd">            Dataset for validation</span>
+<span class="sd">        options : dictionary, optional</span>
+<span class="sd">            Bias reduction algorithm option</span>
+<span class="sd">            Refer to the API of the specified algorithm for details</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;fitting...&#39;</span><span class="p">)</span>
+
+        <span class="c1"># TODO need to fix sorting sensitive attributes</span>
+        <span class="c1"># thres_sort = sorted(thres.items(), key=lambda x:x[0])  # Fixed order of sensitive attributes</span>
+        <span class="k">if</span> <span class="n">dataset_valid</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">approach_type</span> <span class="o">==</span> <span class="s1">&#39;PostProcessing&#39;</span><span class="p">:</span>
+                <span class="n">dataset_valid</span> <span class="o">=</span> <span class="n">dataset_predicted</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">deepcopy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">dataset_valid</span> <span class="o">=</span> <span class="n">dataset_actual</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">deepcopy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">fav_voting_rate_values</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mitigate_each_pair</span><span class="p">(</span><span class="n">dataset_actual</span><span class="p">,</span> <span class="n">dataset_valid</span><span class="o">=</span><span class="n">dataset_valid</span><span class="p">,</span> <span class="n">dataset_predicted</span><span class="o">=</span><span class="n">dataset_predicted</span><span class="p">,</span> <span class="n">enable_fit</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">options</span><span class="p">)</span>
+
+        <span class="n">p_attrs</span> <span class="o">=</span> <span class="n">dataset_valid</span><span class="o">.</span><span class="n">protected_attribute_names</span>
+        <span class="n">stat_table</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># Calculate the accuracy and disparity for each subgroup in about 100 ways while changing the score threshold</span>
+        <span class="k">for</span> <span class="n">uf_t</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.01</span><span class="p">,</span> <span class="mf">0.99</span><span class="p">,</span> <span class="mi">99</span><span class="p">):</span>
+            <span class="n">ds_tmp</span> <span class="o">=</span> <span class="n">dataset_valid</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">deepcopy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">group_protected_attrs</span><span class="p">:</span>
+                <span class="n">ds_tmp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_change_labels_above_threshold</span><span class="p">(</span><span class="n">ds_tmp</span><span class="p">,</span> <span class="n">fav_voting_rate_values</span><span class="p">,</span> <span class="n">uf_t</span><span class="p">,</span> <span class="n">protected_attributes</span><span class="o">=</span><span class="n">g</span><span class="p">)</span>
+            <span class="c1"># Calculate accuracy and fairness for each group</span>
+            <span class="n">stat_table</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_create_stat_table</span><span class="p">(</span><span class="n">dataset_actual</span><span class="p">,</span> <span class="n">dataset_valid</span><span class="p">,</span> <span class="n">ds_tmp</span><span class="p">,</span> <span class="n">uf_t</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">metric</span><span class="p">,</span> <span class="n">p_attrs</span><span class="p">))</span>
+            <span class="k">del</span> <span class="n">ds_tmp</span>
+        <span class="n">protected_attribute_names</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">g</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="n">dfst</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">stat_table</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">protected_attribute_names</span> <span class="o">+</span> <span class="p">[</span><span class="s1">&#39;uf_t&#39;</span><span class="p">,</span> <span class="s1">&#39;P&#39;</span><span class="p">,</span> <span class="s1">&#39;N&#39;</span><span class="p">,</span> <span class="s1">&#39;P^&#39;</span><span class="p">,</span> <span class="s1">&#39;N^&#39;</span><span class="p">,</span> <span class="s1">&#39;TP&#39;</span><span class="p">,</span> <span class="s1">&#39;TN&#39;</span><span class="p">,</span> <span class="s1">&#39;FP&#39;</span><span class="p">,</span> <span class="s1">&#39;FN&#39;</span><span class="p">,</span> <span class="s1">&#39;tpr&#39;</span><span class="p">,</span> <span class="s1">&#39;tnr&#39;</span><span class="p">,</span> <span class="s1">&#39;bl_acc&#39;</span><span class="p">,</span> <span class="s1">&#39;precision&#39;</span><span class="p">,</span> <span class="s1">&#39;f1&#39;</span><span class="p">,</span> <span class="s1">&#39;sel_rate&#39;</span><span class="p">,</span> <span class="s1">&#39;difference&#39;</span><span class="p">,</span> <span class="s1">&#39;ratio&#39;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dfst_all</span> <span class="o">=</span> <span class="n">dfst</span>
+
+        <span class="c1"># For each group, select the uf_t with the highest accuracy rate within the range of the disparity upper limit</span>
+        <span class="n">df_result</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">group_protected_attrs</span><span class="p">:</span>
+            <span class="n">dfst_each_group</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">g</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dfst_each_group</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">dfst_each_group</span> <span class="o">=</span> <span class="n">dfst</span><span class="p">[(</span><span class="n">dfst</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">==</span> <span class="n">value</span><span class="p">)]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">dfst_each_group</span> <span class="o">=</span> <span class="n">dfst_each_group</span><span class="p">[(</span><span class="n">dfst_each_group</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">==</span> <span class="n">value</span><span class="p">)]</span>
+
+            <span class="c1"># Specify targets for bias mitigation</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">instruct_debiasing</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="c1"># Get fairness index value range (upper_limit_disparity_a, upper_limit_disparity_b)</span>
+                <span class="n">upper_limit_disparity_a</span><span class="p">,</span> <span class="n">upper_limit_disparity_b</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_upper_limit_disparity</span><span class="p">(</span><span class="n">g</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;group_protected_attrs=</span><span class="si">{0}</span><span class="s2"> upper_limit_disparity_a=</span><span class="si">{1}</span><span class="s2"> upper_limit_disparity_b=</span><span class="si">{2}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">g</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">upper_limit_disparity_a</span><span class="p">,</span> <span class="n">upper_limit_disparity_b</span><span class="p">))</span>
+                <span class="k">if</span> <span class="n">upper_limit_disparity_a</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">upper_limit_disparity_b</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">continue</span>
+
+                <span class="c1"># Find a threshold set that satisfies the disparity upper limit (upper_limit_disparity)</span>
+                <span class="c1"># If upper_limit_disparity is not satisfied, gradually increase the upper limit</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">51</span><span class="p">):</span>
+                    <span class="n">uld_tmp_a</span> <span class="o">=</span> <span class="n">upper_limit_disparity_a</span> <span class="o">-</span> <span class="n">i</span>
+                    <span class="n">uld_tmp_b</span> <span class="o">=</span> <span class="n">upper_limit_disparity_b</span> <span class="o">+</span> <span class="n">i</span>
+
+                    <span class="c1"># break if there is data that satisfies the index</span>
+                    <span class="n">dfst_each_group_fair</span> <span class="o">=</span> <span class="n">dfst_each_group</span><span class="p">[(</span><span class="n">dfst_each_group</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">upper_limit_disparity_type</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">uld_tmp_a</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">dfst_each_group</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">upper_limit_disparity_type</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">uld_tmp_b</span><span class="p">)]</span>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dfst_each_group_fair</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Satisfied fairness constraint in the range of uld_tmp_a = </span><span class="si">{0:.2f}</span><span class="s2">, uld_tmp_b = </span><span class="si">{1:.2f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">uld_tmp_a</span><span class="p">,</span> <span class="n">uld_tmp_b</span><span class="p">))</span>
+                        <span class="k">break</span>
+
+                <span class="c1"># skip when dfst_each_group_fair is empty</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dfst_each_group_fair</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Not satisfy fairness constraint: &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">g</span><span class="p">))</span>
+                    <span class="k">continue</span>
+
+            <span class="c1"># The bias mitigation evenly.</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Find a threshold set that satisfies the disparity upper limit (upper_limit_disparity)</span>
+                <span class="c1"># If upper_limit_disparity is not satisfied, gradually increase the upper limit</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">51</span><span class="p">):</span>
+                    <span class="n">uld_tmp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">upper_limit_disparity</span> <span class="o">+</span> <span class="n">i</span>
+                    <span class="c1"># Set the threshold closest to base_rate within the disparity upper limit</span>
+                    <span class="n">dfst_each_group_fair</span> <span class="o">=</span> <span class="n">dfst_each_group</span><span class="p">[</span><span class="n">dfst_each_group</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">upper_limit_disparity_type</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span> <span class="o">&lt;=</span> <span class="n">uld_tmp</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dfst_each_group_fair</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># If it is not within the disparity upper limit, extract the threshold that satisfies the most fairness =&gt; widen the disparity</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Satisfied fairness constraint in the range of uld(upper limit disparity) = &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">uld_tmp</span><span class="p">))</span>
+                        <span class="k">break</span>
+                    <span class="k">if</span> <span class="n">uld_tmp</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                        <span class="k">break</span>
+
+            <span class="c1"># Find the threshold set that satisfies the disparity upper bound and has the highest accuracy</span>
+            <span class="n">dfst_each_group</span> <span class="o">=</span> <span class="n">dfst_each_group_fair</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">accuracy_metric</span> <span class="o">==</span> <span class="s1">&#39;Balanced Accuracy&#39;</span><span class="p">:</span>
+                <span class="n">dfst_each_group</span> <span class="o">=</span> <span class="n">dfst_each_group</span><span class="p">[</span><span class="n">dfst_each_group</span><span class="p">[</span><span class="s1">&#39;bl_acc&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">dfst_each_group</span><span class="p">[</span><span class="s1">&#39;bl_acc&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()]</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">accuracy_metric</span> <span class="o">==</span> <span class="s1">&#39;F1&#39;</span><span class="p">:</span>
+                <span class="n">dfst_each_group</span> <span class="o">=</span> <span class="n">dfst_each_group</span><span class="p">[</span><span class="n">dfst_each_group</span><span class="p">[</span><span class="s1">&#39;f1&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">dfst_each_group</span><span class="p">[</span><span class="s1">&#39;f1&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()]</span>
+            <span class="n">dfst_each_group</span> <span class="o">=</span> <span class="n">dfst_each_group</span><span class="p">[</span><span class="n">dfst_each_group</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">upper_limit_disparity_type</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span> <span class="o">==</span> <span class="n">dfst_each_group</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">upper_limit_disparity_type</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">min</span><span class="p">()]</span>
+            <span class="n">dfst_each_group</span> <span class="o">=</span> <span class="n">dfst_each_group</span><span class="p">[</span><span class="n">dfst_each_group</span><span class="p">[</span><span class="s1">&#39;uf_t&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">dfst_each_group</span><span class="p">[</span><span class="s1">&#39;uf_t&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()]</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dfst_each_group</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Not satisfy fairness constraint: &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">g</span><span class="p">))</span>
+                <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">df_result</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">df_result</span> <span class="o">=</span> <span class="n">dfst_each_group</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">df_result</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">df_result</span><span class="p">,</span> <span class="n">dfst_each_group</span><span class="p">])</span>
+
+        <span class="c1"># df_result.to_csv(self.TO.out_dir + &#39;/valid_result_stat.csv&#39;)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;done.&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">df_result</span> <span class="o">=</span> <span class="n">df_result</span></div>
+
+    <span class="k">def</span> <span class="nf">_worker</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ids</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;running isf worker for each subgroup pair:&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">ids</span><span class="p">))</span>
+
+        <span class="n">group1_idx</span> <span class="o">=</span> <span class="n">ids</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">group2_idx</span> <span class="o">=</span> <span class="n">ids</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="c1"># Determine privileged/non-privileged group (necessary for some algorithms)</span>
+        <span class="c1"># (used demographic parity)</span>
+        <span class="c1"># print(&#39;start: &#39; + str(group1_idx) + str(group2_idx))</span>
+        <span class="n">cl_metric</span> <span class="o">=</span> <span class="n">BinaryLabelDatasetMetric</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataset_actual</span><span class="p">,</span>
+                                             <span class="n">unprivileged_groups</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">group_protected_attrs</span><span class="p">[</span><span class="n">group2_idx</span><span class="p">],</span>
+                                             <span class="n">privileged_groups</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">group_protected_attrs</span><span class="p">[</span><span class="n">group1_idx</span><span class="p">])</span>
+        <span class="n">g1</span> <span class="o">=</span> <span class="n">cl_metric</span><span class="o">.</span><span class="n">base_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">g2</span> <span class="o">=</span> <span class="n">cl_metric</span><span class="o">.</span><span class="n">base_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">privileged_protected_attributes</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">unprivileged_protected_attributes</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">g1</span> <span class="o">&gt;</span> <span class="n">g2</span><span class="p">:</span>
+            <span class="n">privileged_protected_attributes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">group_protected_attrs</span><span class="p">[</span><span class="n">group1_idx</span><span class="p">]</span>
+            <span class="n">unprivileged_protected_attributes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">group_protected_attrs</span><span class="p">[</span><span class="n">group2_idx</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">privileged_protected_attributes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">group_protected_attrs</span><span class="p">[</span><span class="n">group2_idx</span><span class="p">]</span>
+            <span class="n">unprivileged_protected_attributes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">group_protected_attrs</span><span class="p">[</span><span class="n">group1_idx</span><span class="p">]</span>
+
+        <span class="n">pname</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_group_name</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataset_actual</span><span class="p">,</span> <span class="n">privileged_protected_attributes</span><span class="p">)</span>
+        <span class="n">uname</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_group_name</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataset_actual</span><span class="p">,</span> <span class="n">unprivileged_protected_attributes</span><span class="p">)</span>
+        <span class="n">pair_name</span> <span class="o">=</span> <span class="n">pname</span> <span class="o">+</span> <span class="s1">&#39;_&#39;</span> <span class="o">+</span> <span class="n">uname</span>
+
+        <span class="c1"># Get dataset with extracted privileged and non-privileged groups</span>
+        <span class="n">ds_act_pair</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_select_protected_attributes</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataset_actual</span><span class="p">,</span>
+                                                              <span class="n">unprivileged_protected_attributes</span><span class="p">,</span>
+                                                              <span class="n">privileged_protected_attributes</span><span class="p">)</span>
+        <span class="n">ds_valid_pair</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_select_protected_attributes</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataset_valid</span><span class="p">,</span>
+                                                                <span class="n">unprivileged_protected_attributes</span><span class="p">,</span>
+                                                                <span class="n">privileged_protected_attributes</span><span class="p">)</span>
+
+        <span class="n">pair_key</span> <span class="o">=</span> <span class="p">(</span><span class="n">group1_idx</span><span class="p">,</span> <span class="n">group2_idx</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">enable_fit</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="s1">&#39;metric&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">metric</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">[</span><span class="n">pair_key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">globals</span><span class="p">()[</span><span class="bp">self</span><span class="o">.</span><span class="n">algorithm</span><span class="p">](</span><span class="n">options</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">options</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">[</span><span class="n">pair_key</span><span class="p">],</span> <span class="n">PostProcessing</span><span class="p">):</span>
+                <span class="n">ds_predicted_pair</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_select_protected_attributes</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataset_predicted</span><span class="p">,</span>
+                                                                            <span class="n">unprivileged_protected_attributes</span><span class="p">,</span>
+                                                                            <span class="n">privileged_protected_attributes</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">[</span><span class="n">pair_key</span><span class="p">]</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">ds_act_pair</span><span class="p">,</span> <span class="n">ds_predicted_pair</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">[</span><span class="n">pair_key</span><span class="p">]</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">ds_act_pair</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">[</span><span class="n">pair_key</span><span class="p">],</span> <span class="n">PreProcessing</span><span class="p">):</span>
+            <span class="n">ds_mitig_valid_pair</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">[</span><span class="n">pair_key</span><span class="p">]</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">ds_valid_pair</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ds_mitig_valid_pair</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">[</span><span class="n">pair_key</span><span class="p">]</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">ds_valid_pair</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_print_pair_metric</span><span class="p">(</span><span class="n">ds_act_pair</span><span class="p">,</span> <span class="n">ds_valid_pair</span><span class="p">,</span> <span class="n">ds_mitig_valid_pair</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">metric</span><span class="p">,</span> <span class="n">pair_name</span><span class="p">,</span> <span class="n">pname</span><span class="p">,</span> <span class="n">uname</span><span class="p">)</span>
+
+        <span class="c1"># Returns a single key of protected attributes</span>
+        <span class="n">ds_train_protected_attributes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_split_integration_key</span><span class="p">(</span><span class="n">ds_mitig_valid_pair</span><span class="p">,</span>
+                                                                    <span class="bp">self</span><span class="o">.</span><span class="n">dataset_valid</span><span class="p">,</span>
+                                                                    <span class="n">unprivileged_protected_attributes</span><span class="p">,</span>
+                                                                    <span class="n">privileged_protected_attributes</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">ds_train_protected_attributes</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">[</span><span class="n">pair_key</span><span class="p">],</span> <span class="n">pair_key</span>
+
+    <span class="k">def</span> <span class="nf">_mitigate_each_pair</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_actual</span><span class="p">,</span> <span class="n">enable_fit</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">dataset_predicted</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dataset_valid</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="p">{}):</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;_mitigate_each_pair()&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">dataset_actual</span> <span class="o">=</span> <span class="n">dataset_actual</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">deepcopy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">enable_fit</span> <span class="o">=</span> <span class="n">enable_fit</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">options</span> <span class="o">=</span> <span class="n">options</span>
+
+        <span class="k">if</span> <span class="n">dataset_valid</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">dataset_valid</span> <span class="o">=</span> <span class="n">dataset_actual</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">deepcopy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dataset_valid</span> <span class="o">=</span> <span class="n">dataset_actual</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">deepcopy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dataset_valid</span> <span class="o">=</span> <span class="n">dataset_valid</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">deepcopy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">dataset_predicted</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dataset_predicted</span> <span class="o">=</span> <span class="n">dataset_predicted</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">deepcopy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">group_protected_attrs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">group_protected_attrs</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">create_multi_group_label</span><span class="p">(</span><span class="n">dataset_valid</span><span class="p">)</span>
+        <span class="c1"># mitigate bias in all patterns that combine protective attributes</span>
+        <span class="c1"># (Generate pairs from multiple groups)</span>
+        <span class="n">ds_pair_transf_list</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="n">id_touples</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">group1_idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">group_protected_attrs</span><span class="p">)):</span>
+            <span class="k">for</span> <span class="n">group2_idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">group1_idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">group_protected_attrs</span><span class="p">)):</span>
+                <span class="n">id_touples</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">group1_idx</span><span class="p">,</span> <span class="n">group2_idx</span><span class="p">,</span> <span class="n">enable_fit</span><span class="p">))</span>
+
+        <span class="k">with</span> <span class="n">concurrent</span><span class="o">.</span><span class="n">futures</span><span class="o">.</span><span class="n">ProcessPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">MAX_WORKERS</span><span class="p">)</span> <span class="k">as</span> <span class="n">excuter</span><span class="p">:</span>
+            <span class="n">mitigation_results</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">excuter</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_worker</span><span class="p">,</span> <span class="n">id_touples</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">mitigation_results</span><span class="p">:</span>
+                <span class="n">ds_pair_transf_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">[</span><span class="n">r</span><span class="p">[</span><span class="mi">2</span><span class="p">]]</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="n">fav_label</span> <span class="o">=</span> <span class="n">dataset_valid</span><span class="o">.</span><span class="n">favorable_label</span>
+
+        <span class="c1"># Tally votes</span>
+        <span class="n">instance_vote_dict</span> <span class="o">=</span> <span class="p">{}</span>  <span class="c1"># key:instance_name, value:[pair_labels] e.g. [0 1 1]</span>
+        <span class="n">instance_conf_dict</span> <span class="o">=</span> <span class="p">{}</span>  <span class="c1"># key:instance_name, value:[pair_confs] e.g. [0.2 0.8 0.7]</span>
+        <span class="n">scores_enable</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">ds_pair</span> <span class="ow">in</span> <span class="n">ds_pair_transf_list</span><span class="p">:</span>
+            <span class="c1"># Check if the score is valid. True if not all 0/1</span>
+            <span class="c1"># Check only one pair, label is the same</span>
+            <span class="k">if</span> <span class="n">scores_enable</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">sum</span><span class="p">(</span><span class="n">ds_pair</span><span class="o">.</span><span class="n">scores</span><span class="p">)</span> <span class="o">==</span> <span class="nb">sum</span><span class="p">(</span><span class="n">ds_pair</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">sum</span><span class="p">(</span><span class="n">ds_pair</span><span class="o">.</span><span class="n">scores</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="nb">sum</span><span class="p">(</span><span class="n">ds_pair</span><span class="o">.</span><span class="n">scores</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">ds_pair</span><span class="o">.</span><span class="n">scores</span><span class="p">):</span>
+                    <span class="n">scores_enable</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">scores_enable</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">ds_pair</span><span class="o">.</span><span class="n">instance_names</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">instance_vote_dict</span><span class="p">:</span>
+                    <span class="n">instance_vote_dict</span><span class="p">[</span><span class="n">n</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ds_pair</span><span class="o">.</span><span class="n">labels</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
+                    <span class="n">instance_conf_dict</span><span class="p">[</span><span class="n">n</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ds_pair</span><span class="o">.</span><span class="n">scores</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">instance_vote_dict</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">ds_pair</span><span class="o">.</span><span class="n">labels</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()[</span><span class="mi">0</span><span class="p">]]</span>
+                    <span class="n">instance_conf_dict</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">ds_pair</span><span class="o">.</span><span class="n">scores</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()[</span><span class="mi">0</span><span class="p">]]</span>
+
+        <span class="c1"># Stores fav confidence (voting rate) for each instance</span>
+        <span class="n">fav_voting_rate_dict</span> <span class="o">=</span> <span class="p">{}</span>  <span class="c1"># key:instance_name, value:fav_confidence</span>
+        <span class="n">score_type</span> <span class="o">=</span> <span class="mi">3</span>  <span class="c1"># 1:only score, 2:avg(vote*score), 3:avg(vote)*w + avg(score)*(1-w)</span>
+        <span class="n">score_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">dataset_valid</span><span class="o">.</span><span class="n">instance_names</span><span class="p">):</span>
+            <span class="n">c_vote</span> <span class="o">=</span> <span class="n">cl</span><span class="o">.</span><span class="n">Counter</span><span class="p">(</span><span class="n">instance_vote_dict</span><span class="p">[</span><span class="n">n</span><span class="p">])</span>
+            <span class="n">voting_rate</span> <span class="o">=</span> <span class="n">c_vote</span><span class="p">[</span><span class="n">fav_label</span><span class="p">]</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">instance_vote_dict</span><span class="p">[</span><span class="n">n</span><span class="p">])</span>  <span class="c1"># Not necessarily label={0,1}</span>
+            <span class="n">confidence</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="n">scores_enable</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">score_type</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">confidence</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">instance_conf_dict</span><span class="p">[</span><span class="n">n</span><span class="p">])</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">instance_conf_dict</span><span class="p">[</span><span class="n">n</span><span class="p">])</span>
+                <span class="k">elif</span> <span class="n">score_type</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                    <span class="n">confidence</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">instance_vote_dict</span><span class="p">[</span><span class="n">n</span><span class="p">])</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">instance_conf_dict</span><span class="p">[</span><span class="n">n</span><span class="p">])</span>
+                    <span class="n">confidence</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">confidence</span><span class="p">)</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">instance_vote_dict</span><span class="p">[</span><span class="n">n</span><span class="p">])</span>
+                <span class="k">elif</span> <span class="n">score_type</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+                    <span class="n">voting_w</span> <span class="o">=</span> <span class="mf">0.75</span>
+                    <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">instance_vote_dict</span><span class="p">[</span><span class="n">n</span><span class="p">])</span>
+                    <span class="n">voting_rate</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">instance_vote_dict</span><span class="p">[</span><span class="n">n</span><span class="p">])</span> <span class="o">/</span> <span class="n">length</span>
+                    <span class="n">voting_score</span> <span class="o">=</span> <span class="n">voting_rate</span> <span class="o">*</span> <span class="n">voting_w</span>
+                    <span class="n">prediction_score</span> <span class="o">=</span> <span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">instance_conf_dict</span><span class="p">[</span><span class="n">n</span><span class="p">])</span> <span class="o">/</span> <span class="n">length</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">voting_w</span><span class="p">)</span>
+                    <span class="n">confidence</span> <span class="o">=</span> <span class="n">voting_score</span> <span class="o">+</span> <span class="n">prediction_score</span>
+
+                    <span class="n">score_list</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">voting_score</span><span class="p">,</span> <span class="n">prediction_score</span><span class="p">,</span> <span class="n">confidence</span><span class="p">])</span>
+
+            <span class="n">fav_voting_rate_dict</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="n">confidence</span>
+
+        <span class="n">fav_voting_rate_values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">fav_voting_rate_dict</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scores</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">score_list</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;voting_rate&#39;</span><span class="p">,</span> <span class="s1">&#39;confidence&#39;</span><span class="p">,</span> <span class="s1">&#39;score&#39;</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="n">fav_voting_rate_values</span>
+
+<div class="viewcode-block" id="IntersectionalFairness.transform"><a class="viewcode-back" href="../../../core_pak.html#isf.core.intersectional_fairness.IntersectionalFairness.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return a new dataset generated by running this Transformer on a input dataset.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataset : StructuredDataset</span>
+<span class="sd">            Input dataset</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataset_cp : StructuredDataset</span>
+<span class="sd">            Dataset containing prediction</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;transforming...&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Rewrite the corrected dataset using the threshold</span>
+        <span class="n">dataset_cp</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">deepcopy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="n">fav_voting_rate_values</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mitigate_each_pair</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">group_protected_attrs</span><span class="p">:</span>
+            <span class="n">param</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">df_result</span>
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">g</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">param</span> <span class="o">=</span> <span class="n">param</span><span class="p">[(</span><span class="n">param</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">==</span> <span class="n">value</span><span class="p">)]</span>
+
+            <span class="c1"># If there is no fit() result threshold, go to the next g</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">param</span><span class="p">[</span><span class="s1">&#39;uf_t&#39;</span><span class="p">])</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="n">uf_t</span> <span class="o">=</span> <span class="n">param</span><span class="p">[</span><span class="s1">&#39;uf_t&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;apply score threshold: &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">uf_t</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;subgroup &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">g</span><span class="p">))</span>
+            <span class="n">dataset_cp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_change_labels_above_threshold</span><span class="p">(</span><span class="n">dataset_cp</span><span class="p">,</span> <span class="n">fav_voting_rate_values</span><span class="p">,</span> <span class="n">uf_t</span><span class="p">,</span> <span class="n">protected_attributes</span><span class="o">=</span><span class="n">g</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;done.&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">dataset_cp</span></div>
+
+<div class="viewcode-block" id="IntersectionalFairness.predict"><a class="viewcode-back" href="../../../core_pak.html#isf.core.intersectional_fairness.IntersectionalFairness.predict">[docs]</a>    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Obtain the prediction for the provided dataset using the learned classifier model.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataset : StructuredDataset</span>
+<span class="sd">            Dataset</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataset_cp : StructuredDataset</span>
+<span class="sd">            Dataset containing prediction</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">dataset_cp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">dataset_cp</span></div>
+
+    <span class="k">def</span> <span class="nf">_change_labels_above_threshold</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ds_target</span><span class="p">,</span> <span class="n">fav_voting_rate_values</span><span class="p">,</span> <span class="n">uf_t</span><span class="p">,</span> <span class="n">protected_attributes</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+
+        <span class="n">protected_attribute_values</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">protected_attributes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">pa00</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">ds_target</span><span class="o">.</span><span class="n">protected_attributes</span> <span class="o">==</span> <span class="n">protected_attribute_values</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">more_uf_t</span> <span class="o">=</span> <span class="n">fav_voting_rate_values</span> <span class="o">&gt;</span> <span class="n">uf_t</span>
+            <span class="n">lower_uf_t</span> <span class="o">=</span> <span class="n">fav_voting_rate_values</span> <span class="o">&lt;=</span> <span class="n">uf_t</span>
+            <span class="n">fav_instances_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="n">pa00</span><span class="p">,</span> <span class="n">more_uf_t</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
+            <span class="n">ufav_instances_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="n">pa00</span><span class="p">,</span> <span class="n">lower_uf_t</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
+            <span class="n">ds_target</span><span class="o">.</span><span class="n">labels</span><span class="p">[</span><span class="n">fav_instances_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">ds_target</span><span class="o">.</span><span class="n">favorable_label</span>
+            <span class="n">ds_target</span><span class="o">.</span><span class="n">labels</span><span class="p">[</span><span class="n">ufav_instances_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">ds_target</span><span class="o">.</span><span class="n">unfavorable_label</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="n">exit</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">ds_target</span>
+
+    <span class="k">def</span> <span class="nf">_create_stat_table</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_act</span><span class="p">,</span> <span class="n">dataset_target</span><span class="p">,</span> <span class="n">dataset_target_tmp</span><span class="p">,</span> <span class="n">uf_t</span><span class="p">,</span> <span class="n">metric</span><span class="p">,</span> <span class="n">p_attrs</span><span class="p">):</span>
+        <span class="c1"># dataset_target_tmp Dataset for tentative threshold determination</span>
+        <span class="n">stat_table</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># Calculate accuracy and fairness for each group</span>
+        <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">group_protected_attrs</span><span class="p">:</span>
+            <span class="n">m_oa</span> <span class="o">=</span> <span class="n">ClassificationMetric</span><span class="p">(</span><span class="n">dataset_act</span><span class="p">,</span> <span class="n">dataset_target</span><span class="p">,</span> <span class="n">privileged_groups</span><span class="o">=</span><span class="n">g</span><span class="p">)</span>  <span class="c1"># TPR and FPR cannot be calculated before threshold determination because there is no overall post-mitigation data set.</span>
+            <span class="n">m_sg_mitig</span> <span class="o">=</span> <span class="n">ClassificationMetric</span><span class="p">(</span><span class="n">dataset_act</span><span class="p">,</span> <span class="n">dataset_target_tmp</span><span class="p">,</span> <span class="n">privileged_groups</span><span class="o">=</span><span class="n">g</span><span class="p">)</span>
+            <span class="n">difference</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">ratio</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">if</span> <span class="n">metric</span> <span class="ow">in</span> <span class="n">const</span><span class="o">.</span><span class="n">DEMOGRAPHIC_PARITY</span><span class="p">:</span>
+                <span class="n">difference</span> <span class="o">=</span> <span class="n">m_sg_mitig</span><span class="o">.</span><span class="n">selection_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">-</span> <span class="n">m_oa</span><span class="o">.</span><span class="n">selection_rate</span><span class="p">()</span>
+
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">instruct_debiasing</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+                    <span class="c1"># When setting the priority of bias mitigation, return the fairness index value instead of &quot;disparity&quot;</span>
+                    <span class="n">ratio</span> <span class="o">=</span> <span class="n">m_sg_mitig</span><span class="o">.</span><span class="n">selection_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">/</span> <span class="n">m_oa</span><span class="o">.</span><span class="n">selection_rate</span><span class="p">()</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">m_oa</span><span class="o">.</span><span class="n">selection_rate</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">m_sg_mitig</span><span class="o">.</span><span class="n">selection_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="n">ratio</span> <span class="o">=</span> <span class="mi">1</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">ratio</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="nb">min</span><span class="p">(</span><span class="n">m_oa</span><span class="o">.</span><span class="n">selection_rate</span><span class="p">()</span> <span class="o">/</span> <span class="n">m_sg_mitig</span><span class="o">.</span><span class="n">selection_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+                                        <span class="n">m_sg_mitig</span><span class="o">.</span><span class="n">selection_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">/</span> <span class="n">m_oa</span><span class="o">.</span><span class="n">selection_rate</span><span class="p">())</span>
+
+            <span class="k">elif</span> <span class="n">metric</span> <span class="ow">in</span> <span class="n">const</span><span class="o">.</span><span class="n">EQUAL_OPPORTUNITY</span><span class="p">:</span>
+                <span class="n">difference</span> <span class="o">=</span> <span class="n">m_sg_mitig</span><span class="o">.</span><span class="n">true_positive_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">-</span> <span class="n">m_oa</span><span class="o">.</span><span class="n">true_positive_rate</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">m_oa</span><span class="o">.</span><span class="n">true_positive_rate</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">m_sg_mitig</span><span class="o">.</span><span class="n">true_positive_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">ratio</span> <span class="o">=</span> <span class="mi">1</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">ratio</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="nb">min</span><span class="p">(</span><span class="n">m_oa</span><span class="o">.</span><span class="n">true_positive_rate</span><span class="p">()</span> <span class="o">/</span> <span class="n">m_sg_mitig</span><span class="o">.</span><span class="n">true_positive_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+                                    <span class="n">m_sg_mitig</span><span class="o">.</span><span class="n">true_positive_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">/</span> <span class="n">m_oa</span><span class="o">.</span><span class="n">true_positive_rate</span><span class="p">())</span>
+            <span class="k">elif</span> <span class="n">metric</span> <span class="ow">in</span> <span class="n">const</span><span class="o">.</span><span class="n">EQUALIZED_ODDS</span><span class="p">:</span>
+                <span class="n">m_cl_TPR</span> <span class="o">=</span> <span class="n">m_oa</span><span class="o">.</span><span class="n">true_positive_rate</span><span class="p">()</span>
+                <span class="n">m_cl_FPR</span> <span class="o">=</span> <span class="n">m_oa</span><span class="o">.</span><span class="n">false_positive_rate</span><span class="p">()</span>
+                <span class="n">m_TPR</span> <span class="o">=</span> <span class="n">m_sg_mitig</span><span class="o">.</span><span class="n">true_positive_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">m_FPR</span> <span class="o">=</span> <span class="n">m_sg_mitig</span><span class="o">.</span><span class="n">false_positive_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">difference</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">((</span><span class="n">m_cl_TPR</span> <span class="o">+</span> <span class="n">m_cl_FPR</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="n">m_TPR</span> <span class="o">+</span> <span class="n">m_FPR</span><span class="p">))</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">m_cl_TPR</span> <span class="o">+</span> <span class="n">m_cl_FPR</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="p">(</span><span class="n">m_TPR</span> <span class="o">+</span> <span class="n">m_FPR</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">ratio</span> <span class="o">=</span> <span class="mi">1</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">ratio</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="nb">min</span><span class="p">((</span><span class="n">m_cl_TPR</span> <span class="o">+</span> <span class="n">m_cl_FPR</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">m_TPR</span> <span class="o">+</span> <span class="n">m_FPR</span><span class="p">),</span> <span class="p">(</span><span class="n">m_TPR</span> <span class="o">+</span> <span class="n">m_FPR</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">m_cl_TPR</span> <span class="o">+</span> <span class="n">m_cl_FPR</span><span class="p">))</span>
+            <span class="k">elif</span> <span class="n">metric</span> <span class="ow">in</span> <span class="n">const</span><span class="o">.</span><span class="n">F1_PARITY</span><span class="p">:</span>
+                <span class="n">m_cl_precision</span> <span class="o">=</span> <span class="n">m_oa</span><span class="o">.</span><span class="n">precision</span><span class="p">()</span>
+                <span class="n">m_cl_recall</span> <span class="o">=</span> <span class="n">m_oa</span><span class="o">.</span><span class="n">recall</span><span class="p">()</span>
+                <span class="n">m_cl_f1</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">m_cl_precision</span> <span class="o">*</span> <span class="n">m_cl_recall</span> <span class="o">/</span> <span class="p">(</span><span class="n">m_cl_precision</span> <span class="o">+</span> <span class="n">m_cl_recall</span><span class="p">)</span>
+                <span class="n">m_precision</span> <span class="o">=</span> <span class="n">m_sg_mitig</span><span class="o">.</span><span class="n">precision</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">m_recall</span> <span class="o">=</span> <span class="n">m_sg_mitig</span><span class="o">.</span><span class="n">recall</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">m_f1</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">m_precision</span> <span class="o">*</span> <span class="n">m_recall</span> <span class="o">/</span> <span class="p">(</span><span class="n">m_precision</span> <span class="o">+</span> <span class="n">m_recall</span><span class="p">)</span>
+                <span class="n">difference</span> <span class="o">=</span> <span class="n">m_f1</span> <span class="o">-</span> <span class="n">m_cl_f1</span>
+                <span class="n">ratio</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="nb">min</span><span class="p">(</span><span class="n">m_cl_f1</span> <span class="o">/</span> <span class="n">m_f1</span><span class="p">,</span> <span class="n">m_f1</span> <span class="o">/</span> <span class="n">m_cl_f1</span><span class="p">)</span>
+            <span class="n">protected_attribute_values</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">g</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+
+            <span class="n">TPR</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span> <span class="k">if</span> <span class="n">math</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">m_sg_mitig</span><span class="o">.</span><span class="n">true_positive_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span> <span class="k">else</span> <span class="n">m_sg_mitig</span><span class="o">.</span><span class="n">true_positive_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">TNR</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span> <span class="k">if</span> <span class="n">math</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">m_sg_mitig</span><span class="o">.</span><span class="n">true_negative_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span> <span class="k">else</span> <span class="n">m_sg_mitig</span><span class="o">.</span><span class="n">true_negative_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">bal_acc</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span> <span class="k">if</span> <span class="n">TPR</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">or</span> <span class="n">TNR</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span> <span class="k">else</span> <span class="p">(</span><span class="n">TPR</span> <span class="o">+</span> <span class="n">TNR</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.5</span>
+            <span class="n">precision</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span> <span class="k">if</span> <span class="n">math</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">m_sg_mitig</span><span class="o">.</span><span class="n">precision</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span> <span class="k">else</span> <span class="n">m_sg_mitig</span><span class="o">.</span><span class="n">precision</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="c1"># TODO Warning if recall precision=0</span>
+            <span class="n">f1</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span> <span class="k">if</span> <span class="n">precision</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">or</span> <span class="n">TPR</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span> <span class="k">else</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">TPR</span> <span class="o">*</span> <span class="n">precision</span> <span class="o">/</span> <span class="p">(</span><span class="n">TPR</span> <span class="o">+</span> <span class="n">precision</span><span class="p">)</span>
+
+            <span class="n">metrics</span> <span class="o">=</span> <span class="p">[</span><span class="n">uf_t</span><span class="p">,</span>
+                       <span class="n">m_sg_mitig</span><span class="o">.</span><span class="n">num_positives</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+                       <span class="n">m_sg_mitig</span><span class="o">.</span><span class="n">num_negatives</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+                       <span class="n">m_sg_mitig</span><span class="o">.</span><span class="n">num_pred_positives</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+                       <span class="n">m_sg_mitig</span><span class="o">.</span><span class="n">num_pred_negatives</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+                       <span class="n">m_sg_mitig</span><span class="o">.</span><span class="n">num_true_positives</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+                       <span class="n">m_sg_mitig</span><span class="o">.</span><span class="n">num_true_negatives</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+                       <span class="n">m_sg_mitig</span><span class="o">.</span><span class="n">num_false_positives</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+                       <span class="n">m_sg_mitig</span><span class="o">.</span><span class="n">num_false_negatives</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+                       <span class="n">TPR</span><span class="p">,</span>
+                       <span class="n">TNR</span><span class="p">,</span>
+                       <span class="n">bal_acc</span><span class="p">,</span>
+                       <span class="n">precision</span><span class="p">,</span>
+                       <span class="n">f1</span><span class="p">,</span>
+                       <span class="n">m_sg_mitig</span><span class="o">.</span><span class="n">selection_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+                       <span class="n">difference</span><span class="p">,</span>
+                       <span class="n">ratio</span><span class="p">]</span>  <span class="c1"># TODO Combine with selection_rate after classification</span>
+            <span class="n">stat_table</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">protected_attribute_values</span> <span class="o">+</span> <span class="n">metrics</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">stat_table</span>
+
+    <span class="k">def</span> <span class="nf">_print_pair_metric</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ds_act_pair</span><span class="p">,</span> <span class="n">ds_target_pair</span><span class="p">,</span> <span class="n">ds_mitig_target_pair</span><span class="p">,</span> <span class="n">metric</span><span class="p">,</span> <span class="n">pair_name</span><span class="p">,</span> <span class="n">pname</span><span class="p">,</span> <span class="n">uname</span><span class="p">):</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">ds_target_pair</span><span class="o">.</span><span class="n">instance_names</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="n">ds_mitig_target_pair</span><span class="o">.</span><span class="n">instance_names</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+                <span class="n">pa1</span> <span class="o">=</span> <span class="n">ds_mitig_target_pair</span><span class="o">.</span><span class="n">protected_attributes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">r</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">n</span><span class="p">,</span> <span class="n">pa1</span><span class="p">,</span> <span class="n">ds_target_pair</span><span class="o">.</span><span class="n">scores</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">ds_target_pair</span><span class="o">.</span><span class="n">labels</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">ds_mitig_target_pair</span><span class="o">.</span><span class="n">labels</span><span class="p">[</span><span class="n">i</span><span class="p">]])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;Not match name.&#39;</span><span class="p">)</span>
+                <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">target_metric</span> <span class="o">=</span> <span class="n">ClassificationMetric</span><span class="p">(</span><span class="n">ds_act_pair</span><span class="p">,</span> <span class="n">ds_target_pair</span><span class="p">,</span>
+                                             <span class="n">unprivileged_groups</span><span class="o">=</span><span class="p">[{</span><span class="s1">&#39;ikey&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">}],</span>
+                                             <span class="n">privileged_groups</span><span class="o">=</span><span class="p">[{</span><span class="s1">&#39;ikey&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">}])</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">ds_act_pair_cp</span> <span class="o">=</span> <span class="n">ds_act_pair</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">deepcopy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">ds_act_pair_cp</span><span class="o">.</span><span class="n">labels</span> <span class="o">=</span> <span class="n">ds_mitig_target_pair</span><span class="o">.</span><span class="n">labels</span>
+            <span class="n">mitig_metric</span> <span class="o">=</span> <span class="n">ClassificationMetric</span><span class="p">(</span><span class="n">ds_act_pair</span><span class="p">,</span> <span class="n">ds_act_pair_cp</span><span class="p">,</span>
+                                                <span class="n">unprivileged_groups</span><span class="o">=</span><span class="p">[{</span><span class="s1">&#39;ikey&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">}],</span>
+                                                <span class="n">privileged_groups</span><span class="o">=</span><span class="p">[{</span><span class="s1">&#39;ikey&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">}])</span>
+            <span class="n">mlist</span> <span class="o">=</span> <span class="p">[</span><span class="n">pname</span><span class="p">,</span> <span class="n">uname</span><span class="p">,</span>
+                     <span class="n">target_metric</span><span class="o">.</span><span class="n">selection_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+                     <span class="n">target_metric</span><span class="o">.</span><span class="n">selection_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+                     <span class="n">mitig_metric</span><span class="o">.</span><span class="n">selection_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+                     <span class="n">mitig_metric</span><span class="o">.</span><span class="n">selection_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+                     <span class="n">target_metric</span><span class="o">.</span><span class="n">true_positive_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+                     <span class="n">target_metric</span><span class="o">.</span><span class="n">true_positive_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+                     <span class="n">mitig_metric</span><span class="o">.</span><span class="n">true_positive_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+                     <span class="n">mitig_metric</span><span class="o">.</span><span class="n">true_positive_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+                     <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">target_metric</span><span class="o">.</span><span class="n">true_positive_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">+</span> <span class="n">target_metric</span><span class="o">.</span><span class="n">false_positive_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">)),</span>
+                     <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">target_metric</span><span class="o">.</span><span class="n">true_positive_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">+</span> <span class="n">target_metric</span><span class="o">.</span><span class="n">false_positive_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">False</span><span class="p">)),</span>
+                     <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">mitig_metric</span><span class="o">.</span><span class="n">true_positive_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">+</span> <span class="n">mitig_metric</span><span class="o">.</span><span class="n">false_positive_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">)),</span>
+                     <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">mitig_metric</span><span class="o">.</span><span class="n">true_positive_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">+</span> <span class="n">mitig_metric</span><span class="o">.</span><span class="n">false_positive_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">False</span><span class="p">)),</span>
+                     <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">target_metric</span><span class="o">.</span><span class="n">true_positive_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">+</span> <span class="n">target_metric</span><span class="o">.</span><span class="n">true_negative_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">)),</span>
+                     <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">target_metric</span><span class="o">.</span><span class="n">true_positive_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">+</span> <span class="n">target_metric</span><span class="o">.</span><span class="n">true_negative_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">)),</span>
+                     <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">mitig_metric</span><span class="o">.</span><span class="n">true_positive_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">+</span> <span class="n">mitig_metric</span><span class="o">.</span><span class="n">true_negative_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">False</span><span class="p">)),</span>
+                     <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">mitig_metric</span><span class="o">.</span><span class="n">true_positive_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">+</span> <span class="n">mitig_metric</span><span class="o">.</span><span class="n">true_negative_rate</span><span class="p">(</span><span class="n">privileged</span><span class="o">=</span><span class="kc">False</span><span class="p">))]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pair_metric_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mlist</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="n">v_act</span> <span class="o">=</span> <span class="nb">vars</span><span class="p">(</span><span class="n">ds_act_pair</span><span class="p">)</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">TO</span><span class="o">.</span><span class="n">out_dir</span> <span class="o">+</span> <span class="s1">&#39;/ds_act_pair.txt&#39;</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">v_act</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">f</span><span class="p">)</span>
+            <span class="n">v_mitig_target</span> <span class="o">=</span> <span class="nb">vars</span><span class="p">(</span><span class="n">ds_mitig_target_pair</span><span class="p">)</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">TO</span><span class="o">.</span><span class="n">out_dir</span> <span class="o">+</span> <span class="s1">&#39;/ds_mitig_target_pair.txt&#39;</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">v_mitig_target</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">f</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">traceback</span><span class="o">.</span><span class="n">format_exc</span><span class="p">())</span>
+
+    <span class="k">def</span> <span class="nf">_get_attribute_vals</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">attributes</span><span class="o">=</span><span class="p">[]):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the sensitive attribute label</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataset : StructuredDataset</span>
+<span class="sd">            Dataset</span>
+<span class="sd">        attributes : list, optional</span>
+<span class="sd">            Sensitive attribute</span>
+<span class="sd">        Returns</span>
+<span class="sd">        ----------</span>
+<span class="sd">        attributes_vals : tuple</span>
+<span class="sd">            Label of the sensitive attribute</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">dataset</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Input DataSet in NoneType.&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">StructuredDataset</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Input DataSet not StructuredDataset.&quot;</span><span class="p">)</span>
+
+        <span class="n">attributes_vals</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">key1</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">protected_attribute_names</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">attributes</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">key2</span> <span class="ow">in</span> <span class="n">item</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                    <span class="k">if</span> <span class="n">key1</span> <span class="o">==</span> <span class="n">key2</span><span class="p">:</span>
+                        <span class="n">attributes_vals</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="n">key2</span><span class="p">]))</span>
+                        <span class="k">break</span>
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">attributes_vals</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_get_attribute_keys</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">attributes</span><span class="o">=</span><span class="p">[]):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the key of sensitive attribute</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataset : StructuredDataset</span>
+<span class="sd">            Dataset containing sensitive attribute</span>
+<span class="sd">        attributes : list, optional</span>
+<span class="sd">            sensitive attribute</span>
+<span class="sd">        Returns</span>
+<span class="sd">        ----------</span>
+<span class="sd">        attributes_keys: tuple</span>
+<span class="sd">            key of the sensitive attribute</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">dataset</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Input DataSet in NoneType.&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">StructuredDataset</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Input DataSet not StructuredDataset.&quot;</span><span class="p">)</span>
+
+        <span class="n">attributes_keys</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">key1</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">protected_attribute_names</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">attributes</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">key2</span> <span class="ow">in</span> <span class="n">item</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                    <span class="k">if</span> <span class="n">key1</span> <span class="o">==</span> <span class="n">key2</span><span class="p">:</span>
+                        <span class="n">attributes_keys</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="nb">float</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="n">key2</span><span class="p">])]))</span>
+                        <span class="k">break</span>
+        <span class="k">return</span> <span class="n">attributes_keys</span>
+
+    <span class="k">def</span> <span class="nf">_split_group</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">unprivileged_protected_attributes</span><span class="o">=</span><span class="p">[],</span> <span class="n">privileged_protected_attributes</span><span class="o">=</span><span class="p">[]):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Extract only privileged/non-privileged groups and convert to dataset</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        privileged_protected_attributes : list</span>
+<span class="sd">            Privileged group</span>
+<span class="sd">        unprivileged_protected_attributes : list</span>
+<span class="sd">            Non-privileged group</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        ----------</span>
+<span class="sd">        enable_ds : StructuredDataset</span>
+<span class="sd">            Dataset extracting only privileged/non-privileged groups</span>
+<span class="sd">        disable_ds : StructuredDataset</span>
+<span class="sd">            Dataset other than privileged/non-privileged groups</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">dataset</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Input DataSet in NoneType.&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">StructuredDataset</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Input DataSet not StructuredDataset.&quot;</span><span class="p">)</span>
+
+        <span class="n">enable_ds</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># Existence check for attributes</span>
+        <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">unprivileged_protected_attributes</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">item</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">dataset</span><span class="o">.</span><span class="n">protected_attribute_names</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="s2">&quot;unprivileged_protected_attributes not in protected_attribute_names.&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">privileged_protected_attributes</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">item</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">dataset</span><span class="o">.</span><span class="n">protected_attribute_names</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="s2">&quot;privileged_protected_attributes not in protected_attribute_names.&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Convert from dataset to dataframe (Pandas)</span>
+        <span class="n">df</span><span class="p">,</span> <span class="n">attributes</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">convert_to_dataframe</span><span class="p">()</span>
+
+        <span class="n">unprivileged_protected_attributes_vals</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_attribute_vals</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">unprivileged_protected_attributes</span><span class="p">)</span>
+        <span class="n">privileged_protected_attributes_vals</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_attribute_vals</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">privileged_protected_attributes</span><span class="p">)</span>
+
+        <span class="c1"># Combine privileged and non-privileged groups</span>
+        <span class="n">enable_df</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">disable_df</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">c1</span><span class="p">,</span> <span class="n">sdf</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">protected_attribute_names</span><span class="p">):</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">unprivileged_protected_attributes_vals</span> <span class="o">==</span> <span class="n">c1</span> <span class="ow">or</span> <span class="n">privileged_protected_attributes_vals</span> <span class="o">==</span> <span class="n">c1</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">enable_df</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">enable_df</span> <span class="o">=</span> <span class="n">sdf</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">enable_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">enable_df</span><span class="p">,</span> <span class="n">sdf</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">disable_df</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">disable_df</span> <span class="o">=</span> <span class="n">sdf</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">disable_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">disable_df</span><span class="p">,</span> <span class="n">sdf</span><span class="p">])</span>
+
+        <span class="n">unprivileged_protected_attributes_keys</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_attribute_keys</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">unprivileged_protected_attributes</span><span class="p">)</span>
+        <span class="n">privileged_protected_attributes_keys</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_attribute_keys</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">privileged_protected_attributes</span><span class="p">)</span>
+
+        <span class="c1"># Convert privileged and non-privileged group dataframes (Pandas) to datasets</span>
+        <span class="n">enable_ds</span> <span class="o">=</span> <span class="n">BinaryLabelDataset</span><span class="p">(</span>
+            <span class="n">df</span><span class="o">=</span><span class="n">enable_df</span><span class="p">,</span>
+            <span class="n">label_names</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">label_names</span><span class="p">,</span>
+            <span class="n">protected_attribute_names</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">protected_attribute_names</span><span class="p">,</span>
+            <span class="n">privileged_protected_attributes</span><span class="o">=</span><span class="n">privileged_protected_attributes_keys</span><span class="p">,</span>
+            <span class="n">unprivileged_protected_attributes</span><span class="o">=</span><span class="n">unprivileged_protected_attributes_keys</span><span class="p">,</span>
+            <span class="n">favorable_label</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">favorable_label</span><span class="p">,</span>
+            <span class="n">unfavorable_label</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">unfavorable_label</span><span class="p">)</span>
+
+        <span class="c1"># Search indexing for performance improvement</span>
+        <span class="n">sortlist</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">i1</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">enable_ds</span><span class="o">.</span><span class="n">instance_names</span><span class="p">)):</span>
+            <span class="n">sortlist</span><span class="p">[</span><span class="n">enable_ds</span><span class="o">.</span><span class="n">instance_names</span><span class="p">[</span><span class="n">i1</span><span class="p">]]</span> <span class="o">=</span> <span class="n">i1</span>
+
+        <span class="k">for</span> <span class="n">i1</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">instance_names</span><span class="p">)):</span>
+            <span class="n">idx</span> <span class="o">=</span> <span class="n">sortlist</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">instance_names</span><span class="p">[</span><span class="n">i1</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">idx</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">enable_ds</span><span class="o">.</span><span class="n">labels</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">labels</span><span class="p">[</span><span class="n">i1</span><span class="p">]</span>
+                <span class="n">enable_ds</span><span class="o">.</span><span class="n">scores</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">scores</span><span class="p">[</span><span class="n">i1</span><span class="p">]</span>
+                <span class="n">enable_ds</span><span class="o">.</span><span class="n">instance_weights</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">instance_weights</span><span class="p">[</span><span class="n">i1</span><span class="p">]</span>
+
+        <span class="c1"># Store fairness results as dataframe</span>
+        <span class="n">disable_df</span><span class="p">[</span><span class="s1">&#39;labels&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.</span>
+        <span class="n">disable_df</span><span class="p">[</span><span class="s1">&#39;scores&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.</span>
+        <span class="n">disable_df</span><span class="p">[</span><span class="s1">&#39;instance_weights&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.</span>
+
+        <span class="c1"># Search indexing for performance improvement</span>
+        <span class="n">sortlist</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">i1</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">disable_df</span><span class="o">.</span><span class="n">index</span><span class="p">)):</span>
+            <span class="n">sortlist</span><span class="p">[</span><span class="n">disable_df</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="n">i1</span><span class="p">]]</span> <span class="o">=</span> <span class="n">i1</span>
+
+        <span class="c1"># Restore fairness results to dataset</span>
+        <span class="k">for</span> <span class="n">i1</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">instance_names</span><span class="p">)):</span>
+            <span class="n">idx</span> <span class="o">=</span> <span class="n">sortlist</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">instance_names</span><span class="p">[</span><span class="n">i1</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">idx</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">disable_df</span><span class="p">[</span><span class="s1">&#39;labels&#39;</span><span class="p">][</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">labels</span><span class="p">[</span><span class="n">i1</span><span class="p">]</span>
+                <span class="n">disable_df</span><span class="p">[</span><span class="s1">&#39;scores&#39;</span><span class="p">][</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">scores</span><span class="p">[</span><span class="n">i1</span><span class="p">]</span>
+                <span class="n">disable_df</span><span class="p">[</span><span class="s1">&#39;instance_weights&#39;</span><span class="p">][</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">instance_weights</span><span class="p">[</span><span class="n">i1</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">enable_ds</span><span class="p">,</span> <span class="n">disable_df</span>
+
+    <span class="k">def</span> <span class="nf">_create_integration_key</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">unprivileged_protected_attributes</span><span class="o">=</span><span class="p">[],</span> <span class="n">privileged_protected_attributes</span><span class="o">=</span><span class="p">[]):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns a dataset that converts privileged/non-privileged groups into a single attribute</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataset : StructuredDataset</span>
+<span class="sd">            Dataset</span>
+<span class="sd">        privileged_protected_attributes : list</span>
+<span class="sd">            Privileged group</span>
+<span class="sd">        unprivileged_protected_attributes : list</span>
+<span class="sd">            Non-privileged group</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        ----------</span>
+<span class="sd">        new_ds : StructuredDataset</span>
+<span class="sd">            Dataset merging privileged/non-privileged groups as a single attribute</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">dataset</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Input DataSet in NoneType.&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">StructuredDataset</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Input DataSet not StructuredDataset.&quot;</span><span class="p">)</span>
+
+        <span class="n">new_ds</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># Convert from dataset to dataframe (Pandas)</span>
+        <span class="n">df</span><span class="p">,</span> <span class="n">attributes</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">convert_to_dataframe</span><span class="p">()</span>
+
+        <span class="c1"># Combine privileged and non-privileged groups</span>
+        <span class="c1"># Create integration key</span>
+        <span class="n">new_df</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">protected_attribute_maps_dic</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">ikey2</span> <span class="o">=</span> <span class="mf">0.</span>
+        <span class="k">for</span> <span class="n">c1</span><span class="p">,</span> <span class="n">sdf</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">protected_attribute_names</span><span class="p">):</span>
+            <span class="n">ikey</span> <span class="o">=</span> <span class="mf">0.</span>
+            <span class="n">attributes</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">dicw</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">protected_attribute_names</span><span class="p">)):</span>
+                <span class="n">dicw</span><span class="p">[</span><span class="n">dataset</span><span class="o">.</span><span class="n">protected_attribute_names</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">=</span> <span class="n">c1</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+
+            <span class="n">attributes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dicw</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">unprivileged_protected_attributes</span> <span class="o">==</span> <span class="n">attributes</span><span class="p">:</span>
+                <span class="n">ikey</span> <span class="o">=</span> <span class="mf">0.</span>
+            <span class="k">elif</span> <span class="n">privileged_protected_attributes</span> <span class="o">==</span> <span class="n">attributes</span><span class="p">:</span>
+                <span class="n">ikey</span> <span class="o">=</span> <span class="mf">1.</span>
+            <span class="n">sdf_new</span> <span class="o">=</span> <span class="n">sdf</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">ikey</span><span class="o">=</span><span class="n">ikey</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">new_df</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">new_df</span> <span class="o">=</span> <span class="n">sdf_new</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">new_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">new_df</span><span class="p">,</span> <span class="n">sdf_new</span><span class="p">])</span>
+            <span class="c1"># protected_attribute_maps_dic[ikey2] = itemname</span>
+            <span class="n">ikey2</span> <span class="o">+=</span> <span class="mf">1.</span>
+
+        <span class="c1"># Create a new sensitive attribute</span>
+        <span class="n">protected_attribute_names_new</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;ikey&#39;</span><span class="p">]</span>
+
+        <span class="c1"># Remove old sensitive attribute</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">dataset</span><span class="o">.</span><span class="n">protected_attribute_names</span><span class="p">:</span>
+            <span class="n">new_df</span> <span class="o">=</span> <span class="n">new_df</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+
+        <span class="c1"># Create new privileged and non-privileged groups</span>
+        <span class="n">unprivileged_protected_attributes_new</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">])]</span>
+        <span class="n">privileged_protected_attributes_new</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1.</span><span class="p">])]</span>
+
+        <span class="c1"># Convert data frame (Pandas) converted to composite key to dataset</span>
+        <span class="n">new_ds</span> <span class="o">=</span> <span class="n">BinaryLabelDataset</span><span class="p">(</span>
+            <span class="n">df</span><span class="o">=</span><span class="n">new_df</span><span class="p">,</span>
+            <span class="n">label_names</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">label_names</span><span class="p">,</span>
+            <span class="n">protected_attribute_names</span><span class="o">=</span><span class="n">protected_attribute_names_new</span><span class="p">,</span>
+            <span class="n">privileged_protected_attributes</span><span class="o">=</span><span class="n">privileged_protected_attributes_new</span><span class="p">,</span>
+            <span class="n">unprivileged_protected_attributes</span><span class="o">=</span><span class="n">unprivileged_protected_attributes_new</span><span class="p">,</span>
+            <span class="n">favorable_label</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">favorable_label</span><span class="p">,</span>
+            <span class="n">unfavorable_label</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">unfavorable_label</span><span class="p">)</span>
+
+        <span class="c1"># Search indexing for performance improvement</span>
+        <span class="n">sortlist</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">i1</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">new_ds</span><span class="o">.</span><span class="n">instance_names</span><span class="p">)):</span>
+            <span class="n">sortlist</span><span class="p">[</span><span class="n">new_ds</span><span class="o">.</span><span class="n">instance_names</span><span class="p">[</span><span class="n">i1</span><span class="p">]]</span> <span class="o">=</span> <span class="n">i1</span>
+
+        <span class="c1"># restore fairness results to dataset</span>
+        <span class="k">for</span> <span class="n">i1</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">instance_names</span><span class="p">)):</span>
+            <span class="n">idx</span> <span class="o">=</span> <span class="n">sortlist</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">instance_names</span><span class="p">[</span><span class="n">i1</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">idx</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">new_ds</span><span class="o">.</span><span class="n">labels</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">labels</span><span class="p">[</span><span class="n">i1</span><span class="p">]</span>
+                <span class="n">new_ds</span><span class="o">.</span><span class="n">scores</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">scores</span><span class="p">[</span><span class="n">i1</span><span class="p">]</span>
+                <span class="n">new_ds</span><span class="o">.</span><span class="n">instance_weights</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">instance_weights</span><span class="p">[</span><span class="n">i1</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">new_ds</span><span class="p">,</span> <span class="n">protected_attribute_maps_dic</span>
+
+    <span class="k">def</span> <span class="nf">_split_integration_key</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ds_mitig_target_pair</span><span class="p">,</span> <span class="n">ds_target</span><span class="p">,</span> <span class="n">unprivileged_protected_attributes</span><span class="p">,</span> <span class="n">privileged_protected_attributes</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Restore the conversion dataset that summarizes the attributes to the original configuration</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataset : StructuredDataset</span>
+<span class="sd">            Conversion dataset</span>
+<span class="sd">        dataset_base : StructuredDataset</span>
+<span class="sd">            Pre-conversion dataset</span>
+<span class="sd">        privileged_protected_attributes : list</span>
+<span class="sd">            Privileged group</span>
+<span class="sd">        unprivileged_protected_attributes : list</span>
+<span class="sd">            Non-privileged group</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        ----------</span>
+<span class="sd">        new_ds : StructuredDataset</span>
+<span class="sd">            Dataset converted back to multi-hierarchical key</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">ds_mitig_target_pair</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Input DataSet in NoneType.&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ds_mitig_target_pair</span><span class="p">,</span> <span class="n">StructuredDataset</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Input DataSet not StructuredDataset.&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="s1">&#39;ikey&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ds_mitig_target_pair</span><span class="o">.</span><span class="n">feature_names</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;feature_names not in integration key.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s1">&#39;ikey&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ds_mitig_target_pair</span><span class="o">.</span><span class="n">protected_attribute_names</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;protected_attribute_names not integration key.&quot;</span><span class="p">)</span>
+
+        <span class="n">new_ds</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># Convert from dataset to dataframe (Pandas)</span>
+        <span class="n">new_df</span><span class="p">,</span> <span class="n">attributes</span> <span class="o">=</span> <span class="n">ds_mitig_target_pair</span><span class="o">.</span><span class="n">convert_to_dataframe</span><span class="p">()</span>
+
+        <span class="c1"># Restore old protection attributes</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">ds_target</span><span class="o">.</span><span class="n">protected_attribute_names</span><span class="p">:</span>
+            <span class="n">new_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">new_df</span><span class="p">[</span><span class="s1">&#39;ikey&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">unprivileged_protected_attributes</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">name</span><span class="p">]</span>
+            <span class="n">new_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">new_df</span><span class="p">[</span><span class="s1">&#39;ikey&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span> <span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">privileged_protected_attributes</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">name</span><span class="p">]</span>
+
+        <span class="c1"># Delete integration key</span>
+        <span class="n">new_df</span> <span class="o">=</span> <span class="n">new_df</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="s1">&#39;ikey&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Convert dataframe (Pandas) to dataset</span>
+        <span class="n">new_ds</span> <span class="o">=</span> <span class="n">BinaryLabelDataset</span><span class="p">(</span>
+            <span class="n">df</span><span class="o">=</span><span class="n">new_df</span><span class="p">,</span>
+            <span class="n">label_names</span><span class="o">=</span><span class="n">ds_mitig_target_pair</span><span class="o">.</span><span class="n">label_names</span><span class="p">,</span>
+            <span class="n">protected_attribute_names</span><span class="o">=</span><span class="n">ds_target</span><span class="o">.</span><span class="n">protected_attribute_names</span><span class="p">,</span>
+            <span class="n">privileged_protected_attributes</span><span class="o">=</span><span class="n">ds_target</span><span class="o">.</span><span class="n">privileged_protected_attributes</span><span class="p">,</span>
+            <span class="n">unprivileged_protected_attributes</span><span class="o">=</span><span class="n">ds_target</span><span class="o">.</span><span class="n">unprivileged_protected_attributes</span><span class="p">,</span>
+            <span class="n">favorable_label</span><span class="o">=</span><span class="n">ds_mitig_target_pair</span><span class="o">.</span><span class="n">favorable_label</span><span class="p">,</span>
+            <span class="n">unfavorable_label</span><span class="o">=</span><span class="n">ds_mitig_target_pair</span><span class="o">.</span><span class="n">unfavorable_label</span><span class="p">,</span>
+            <span class="n">metadata</span><span class="o">=</span><span class="n">ds_target</span><span class="o">.</span><span class="n">metadata</span><span class="p">)</span>
+
+        <span class="c1"># Search indexing for performance improvement</span>
+        <span class="n">sortlist</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">i1</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">new_ds</span><span class="o">.</span><span class="n">instance_names</span><span class="p">)):</span>
+            <span class="n">sortlist</span><span class="p">[</span><span class="n">new_ds</span><span class="o">.</span><span class="n">instance_names</span><span class="p">[</span><span class="n">i1</span><span class="p">]]</span> <span class="o">=</span> <span class="n">i1</span>
+
+        <span class="c1"># Restore fairness results to dataset</span>
+        <span class="k">for</span> <span class="n">i1</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ds_mitig_target_pair</span><span class="o">.</span><span class="n">instance_names</span><span class="p">)):</span>
+            <span class="n">idx</span> <span class="o">=</span> <span class="n">sortlist</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">ds_mitig_target_pair</span><span class="o">.</span><span class="n">instance_names</span><span class="p">[</span><span class="n">i1</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">idx</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">new_ds</span><span class="o">.</span><span class="n">labels</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">ds_mitig_target_pair</span><span class="o">.</span><span class="n">labels</span><span class="p">[</span><span class="n">i1</span><span class="p">]</span>
+                <span class="n">new_ds</span><span class="o">.</span><span class="n">scores</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">ds_mitig_target_pair</span><span class="o">.</span><span class="n">scores</span><span class="p">[</span><span class="n">i1</span><span class="p">]</span>
+                <span class="n">new_ds</span><span class="o">.</span><span class="n">instance_weights</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">ds_mitig_target_pair</span><span class="o">.</span><span class="n">instance_weights</span><span class="p">[</span><span class="n">i1</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">new_ds</span>
+
+    <span class="k">def</span> <span class="nf">_select_protected_attributes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">unpriv_protected_attrs</span><span class="p">,</span> <span class="n">priv_protected_attrs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Select 2 groups of privileged/non-privileged and return only the target label data combined</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">StructuredDataset</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Input DataSet not StructuredDataset.&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Extract datasets for privileged and non-privileged groups</span>
+        <span class="n">ds1</span><span class="p">,</span> <span class="n">dfw</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_split_group</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">unpriv_protected_attrs</span><span class="p">,</span> <span class="n">priv_protected_attrs</span><span class="p">)</span>
+
+        <span class="c1"># Convert composite keys for privileged and non-privileged groups to single keys</span>
+        <span class="n">ds2</span><span class="p">,</span> <span class="n">protected_attribute_maps_dic</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_integration_key</span><span class="p">(</span><span class="n">ds1</span><span class="p">,</span> <span class="n">unpriv_protected_attrs</span><span class="p">,</span> <span class="n">priv_protected_attrs</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">ds2</span><span class="p">,</span> <span class="n">dfw</span><span class="p">,</span> <span class="n">protected_attribute_maps_dic</span>
+
+    <span class="k">def</span> <span class="nf">_get_group_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">groups</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the hierarchy combination label</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataset : StructuredDataset</span>
+<span class="sd">            Dataset</span>
+<span class="sd">        groups : dictionary</span>
+<span class="sd">            Group</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        ----------</span>
+<span class="sd">        name : str</span>
+<span class="sd">            Group name</span>
+<span class="sd">            e.g. (sex:1.0, age:1.0, month:6.0)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;(&#39;</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">groups</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">name</span> <span class="o">+=</span> <span class="n">key</span> <span class="o">+</span> <span class="s1">&#39;:&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;, &#39;</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">name</span><span class="p">[:</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;)&#39;</span>
+
+        <span class="k">return</span> <span class="n">name</span>
+
+    <span class="k">def</span> <span class="nf">_convert_to_dataframe_from_debiasing_conditions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">upper_limit_disparity_list</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Convert specified conditions for bias mitigation to dataframe</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">result_df</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">uld_dict</span> <span class="ow">in</span> <span class="n">upper_limit_disparity_list</span><span class="p">:</span>
+            <span class="c1"># Convert uld_dict to 1D dict</span>
+            <span class="n">tmp_dic</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">uld_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">k</span> <span class="o">==</span> <span class="s1">&#39;target_attrs&#39;</span><span class="p">:</span>
+                    <span class="n">tmp_dic</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">tmp_dic</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+
+            <span class="c1"># Dataframe conversion</span>
+            <span class="k">if</span> <span class="n">result_df</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">result_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">tmp_dic</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
+            <span class="n">uld_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">tmp_dic</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">result_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">result_df</span><span class="p">,</span> <span class="n">uld_df</span><span class="p">],</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">result_df</span>
+
+    <span class="k">def</span> <span class="nf">_get_upper_limit_disparity</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">g</span><span class="p">):</span>
+        <span class="n">g_dict</span> <span class="o">=</span> <span class="n">g</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">query_element_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">g_key</span><span class="p">,</span> <span class="n">g_value</span> <span class="ow">in</span> <span class="n">g_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">query_element_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;(`</span><span class="si">{0}</span><span class="s2">` == </span><span class="si">{1}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">g_key</span><span class="p">,</span> <span class="n">g_value</span><span class="p">))</span>
+        <span class="n">query_str</span> <span class="o">=</span> <span class="s1">&#39; &amp; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">query_element_list</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">debiasing_conditions_df</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">query_str</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">uld_a</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;uld_a&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;probability&#39;</span><span class="p">]</span>
+            <span class="n">uld_b</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;uld_b&#39;</span><span class="p">]</span> <span class="o">/</span> <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;probability&#39;</span><span class="p">]</span>
+            <span class="k">return</span> <span class="n">uld_a</span><span class="p">,</span> <span class="n">uld_b</span></div>
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">Intersectional Fairness v0.1.0
+ documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">isf.core.intersectional_fairness</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2023, Fujitsu Limited.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.1.1.
+    </div>
+  </body>
+</html>

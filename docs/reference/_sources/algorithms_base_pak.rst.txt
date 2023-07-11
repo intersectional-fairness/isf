@@ -1,0 +1,23 @@
+isf.algorithms.base.inprocessing
+================================
+
+.. automodule:: isf.algorithms.base.inprocessing
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+isf.algorithms.base.postprocessing
+==================================
+
+.. automodule:: isf.algorithms.base.postprocessing
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+isf.algorithms.base.preprocessing
+=================================
+
+.. automodule:: isf.algorithms.base.preprocessing
+   :members:
+   :undoc-members:
+   :show-inheritance:

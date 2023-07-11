@@ -1,0 +1,7 @@
+isf.analysis.intersectional_bias
+================================
+
+.. automodule:: isf.analysis.intersectional_bias
+   :members:
+   :undoc-members:
+   :show-inheritance:

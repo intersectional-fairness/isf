@@ -1,0 +1,321 @@
+
+<!DOCTYPE html>
+
+<html lang="jp">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>isf.algorithms.lib.checks &#8212; Intersectional Fairness v0.1.0
+ documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/nature.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="isf.analysis.intersectional_bias" href="analysis_pak.html" />
+    <link rel="prev" title="isf.algorithms.base.inprocessing" href="algorithms_base_pak.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="analysis_pak.html" title="isf.analysis.intersectional_bias"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="algorithms_base_pak.html" title="isf.algorithms.base.inprocessing"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Intersectional Fairness v0.1.0
+ documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">isf.algorithms.lib.checks</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="module-isf.algorithms.lib.checks">
+<span id="isf-algorithms-lib-checks"></span><h1>isf.algorithms.lib.checks<a class="headerlink" href="#module-isf.algorithms.lib.checks" title="Permalink to this heading">¶</a></h1>
+<p>Utility functions for doing checks.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="isf.algorithms.lib.checks.check_binary">
+<span class="sig-prename descclassname"><span class="pre">isf.algorithms.lib.checks.</span></span><span class="sig-name descname"><span class="pre">check_binary</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/isf/algorithms/lib/checks.html#check_binary"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#isf.algorithms.lib.checks.check_binary" title="Permalink to this definition">¶</a></dt>
+<dd><p>Binary check.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>x</strong> (<em>numpy.ndarray</em>) -- Target</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>x</strong> -- ValueError if not binary.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>numpy.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="isf.algorithms.lib.checks.is_binary">
+<span class="sig-prename descclassname"><span class="pre">isf.algorithms.lib.checks.</span></span><span class="sig-name descname"><span class="pre">is_binary</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/isf/algorithms/lib/checks.html#is_binary"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#isf.algorithms.lib.checks.is_binary" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check if numpy multidimensional array consists of {0,1}</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>x</strong> (<em>numpy.ndarray</em>) -- Target</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>result</strong> -- Check result</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>boolean</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-isf.algorithms.lib.eq_odds">
+<span id="isf-algorithms-lib-eq-odds"></span><h1>isf.algorithms.lib.eq_odds<a class="headerlink" href="#module-isf.algorithms.lib.eq_odds" title="Permalink to this heading">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="isf.algorithms.lib.eq_odds.Model">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">isf.algorithms.lib.eq_odds.</span></span><span class="sig-name descname"><span class="pre">Model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pred</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/isf/algorithms/lib/eq_odds.html#Model"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#isf.algorithms.lib.eq_odds.Model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#isf.algorithms.lib.eq_odds.Model" title="isf.algorithms.lib.eq_odds.Model"><code class="xref py py-class docutils literal notranslate"><span class="pre">Model</span></code></a></p>
+<p>Based on the model prediction (accuracy), label true value, and group information divided by sensitive attribute, optimization problem is performed and mix_rate (4 variables that become prediction value conversion rules) is calculated.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pred</strong> (<em>series</em>) -- Model prediction (probability)</p></li>
+<li><p><strong>label</strong> (<em>series</em>) -- True label</p></li>
+<li><p><strong>threshold</strong> (<em>float</em>) -- Threshold for how many positive values are considered positive for model prediction</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p><a class="reference external" href="https://github.com/gpleiss/equalized_odds_and_calibration">https://github.com/gpleiss/equalized_odds_and_calibration</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="isf.algorithms.lib.eq_odds.Model.accuracies">
+<span class="sig-name descname"><span class="pre">accuracies</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/isf/algorithms/lib/eq_odds.html#Model.accuracies"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#isf.algorithms.lib.eq_odds.Model.accuracies" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="isf.algorithms.lib.eq_odds.Model.accuracy">
+<span class="sig-name descname"><span class="pre">accuracy</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/isf/algorithms/lib/eq_odds.html#Model.accuracy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#isf.algorithms.lib.eq_odds.Model.accuracy" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="isf.algorithms.lib.eq_odds.Model.base_rate">
+<span class="sig-name descname"><span class="pre">base_rate</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/isf/algorithms/lib/eq_odds.html#Model.base_rate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#isf.algorithms.lib.eq_odds.Model.base_rate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Percentage of samples belonging to the positive class</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="isf.algorithms.lib.eq_odds.Model.eq_odds">
+<span class="sig-name descname"><span class="pre">eq_odds</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">othr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mix_rates</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metric</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'EqualOpportunity'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/isf/algorithms/lib/eq_odds.html#Model.eq_odds"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#isf.algorithms.lib.eq_odds.Model.eq_odds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Based on the model prediction (accuracy), label true value, and group information divided by protection attribute, optimization problem is performed and mix_rate (4 variables that become prediction value conversion rules) is calculated.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>othr</strong> (<a class="reference internal" href="#isf.algorithms.lib.eq_odds.Model" title="isf.algorithms.lib.eq_odds.Model"><em>Model</em></a>) -- input model</p></li>
+<li><p><strong>mix_rates</strong> (<em>tuple</em><em>, </em><em>optional</em>) -- model parameter
+If None, calculate internally</p></li>
+<li><p><strong>threshold</strong> (<em>float</em><em>, </em><em>optional</em>) -- Threshold for how many positive values are considered positive for model prediction</p></li>
+<li><p><strong>metric</strong> (<em>String</em>) -- Used for constraint terms in optimization problems.['EqualOpportunity',&lt;any&gt;]</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>fair_self</strong> (<em>Model</em>) -- self-model after debiasing</p></li>
+<li><p><strong>fair_othr</strong> (<em>Model</em>) -- othr-model after debiasing</p></li>
+<li><p><strong>mix_rates</strong> (<em>tuple</em>) -- model parameter</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="isf.algorithms.lib.eq_odds.Model.eq_odds_optimal_mix_rates">
+<span class="sig-name descname"><span class="pre">eq_odds_optimal_mix_rates</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">othr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metric</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/isf/algorithms/lib/eq_odds.html#Model.eq_odds_optimal_mix_rates"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#isf.algorithms.lib.eq_odds.Model.eq_odds_optimal_mix_rates" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the mix_rate (4 variables that are the conversion rules for predicted values) in the optimization problem</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>othr</strong> (<a class="reference internal" href="#isf.algorithms.lib.eq_odds.Model" title="isf.algorithms.lib.eq_odds.Model"><em>Model</em></a>) -- input model</p></li>
+<li><p><strong>metric</strong> (<em>String</em>) -- Used for constraint terms in optimization problems.['EqualOpportunity',&lt;any&gt;]</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>res</strong> -- mix_rate
+[sp2p, sn2p, op2p, on2p]</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="isf.algorithms.lib.eq_odds.Model.fn_cost">
+<span class="sig-name descname"><span class="pre">fn_cost</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/isf/algorithms/lib/eq_odds.html#Model.fn_cost"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#isf.algorithms.lib.eq_odds.Model.fn_cost" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generalized false negative cost</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="isf.algorithms.lib.eq_odds.Model.fnr">
+<span class="sig-name descname"><span class="pre">fnr</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/isf/algorithms/lib/eq_odds.html#Model.fnr"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#isf.algorithms.lib.eq_odds.Model.fnr" title="Permalink to this definition">¶</a></dt>
+<dd><p>False negative rate</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="isf.algorithms.lib.eq_odds.Model.fp_cost">
+<span class="sig-name descname"><span class="pre">fp_cost</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/isf/algorithms/lib/eq_odds.html#Model.fp_cost"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#isf.algorithms.lib.eq_odds.Model.fp_cost" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generalized false positive cost</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="isf.algorithms.lib.eq_odds.Model.fpr">
+<span class="sig-name descname"><span class="pre">fpr</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/isf/algorithms/lib/eq_odds.html#Model.fpr"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#isf.algorithms.lib.eq_odds.Model.fpr" title="Permalink to this definition">¶</a></dt>
+<dd><p>False positive rate</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="isf.algorithms.lib.eq_odds.Model.logits">
+<span class="sig-name descname"><span class="pre">logits</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/isf/algorithms/lib/eq_odds.html#Model.logits"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#isf.algorithms.lib.eq_odds.Model.logits" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="isf.algorithms.lib.eq_odds.Model.num_samples">
+<span class="sig-name descname"><span class="pre">num_samples</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/isf/algorithms/lib/eq_odds.html#Model.num_samples"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#isf.algorithms.lib.eq_odds.Model.num_samples" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="isf.algorithms.lib.eq_odds.Model.precision">
+<span class="sig-name descname"><span class="pre">precision</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/isf/algorithms/lib/eq_odds.html#Model.precision"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#isf.algorithms.lib.eq_odds.Model.precision" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="isf.algorithms.lib.eq_odds.Model.recall">
+<span class="sig-name descname"><span class="pre">recall</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/isf/algorithms/lib/eq_odds.html#Model.recall"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#isf.algorithms.lib.eq_odds.Model.recall" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="isf.algorithms.lib.eq_odds.Model.tnr">
+<span class="sig-name descname"><span class="pre">tnr</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/isf/algorithms/lib/eq_odds.html#Model.tnr"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#isf.algorithms.lib.eq_odds.Model.tnr" title="Permalink to this definition">¶</a></dt>
+<dd><p>True negative rate</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="isf.algorithms.lib.eq_odds.Model.tpr">
+<span class="sig-name descname"><span class="pre">tpr</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/isf/algorithms/lib/eq_odds.html#Model.tpr"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#isf.algorithms.lib.eq_odds.Model.tpr" title="Permalink to this definition">¶</a></dt>
+<dd><p>True positive rate</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-isf.algorithms.lib.relabelling">
+<span id="isf-algorithms-lib-relabelling"></span><h1>isf.algorithms.lib.relabelling<a class="headerlink" href="#module-isf.algorithms.lib.relabelling" title="Permalink to this heading">¶</a></h1>
+<p>Relabel examples in a dataset for fairness-aware model training.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="isf.algorithms.lib.relabelling.Relabeller">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">isf.algorithms.lib.relabelling.</span></span><span class="sig-name descname"><span class="pre">Relabeller</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ranker</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">LogisticRegression()</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/isf/algorithms/lib/relabelling.html#Relabeller"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#isf.algorithms.lib.relabelling.Relabeller" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseEstimator</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">TransformerMixin</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">MetaEstimatorMixin</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="isf.algorithms.lib.relabelling.Relabeller.fit">
+<span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/isf/algorithms/lib/relabelling.html#Relabeller.fit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#isf.algorithms.lib.relabelling.Relabeller.fit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fit relabeller.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="isf.algorithms.lib.relabelling.Relabeller.transform">
+<span class="sig-name descname"><span class="pre">transform</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/isf/algorithms/lib/relabelling.html#Relabeller.transform"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#isf.algorithms.lib.relabelling.Relabeller.transform" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transform relabeller.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div>
+    <h3><a href="index.html">Table of Contents</a></h3>
+    <ul>
+<li><a class="reference internal" href="#">isf.algorithms.lib.checks</a></li>
+<li><a class="reference internal" href="#module-isf.algorithms.lib.eq_odds">isf.algorithms.lib.eq_odds</a></li>
+<li><a class="reference internal" href="#module-isf.algorithms.lib.relabelling">isf.algorithms.lib.relabelling</a></li>
+</ul>
+
+  </div>
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="algorithms_base_pak.html"
+                          title="previous chapter">isf.algorithms.base.inprocessing</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="analysis_pak.html"
+                          title="next chapter">isf.analysis.intersectional_bias</a></p>
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/algorithms_lib_pak.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="analysis_pak.html" title="isf.analysis.intersectional_bias"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="algorithms_base_pak.html" title="isf.algorithms.base.inprocessing"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Intersectional Fairness v0.1.0
+ documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">isf.algorithms.lib.checks</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2023, Fujitsu Limited.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.1.1.
+    </div>
+  </body>
+</html>

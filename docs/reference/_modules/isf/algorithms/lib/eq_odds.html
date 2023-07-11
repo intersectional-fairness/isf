@@ -1,0 +1,377 @@
+
+<!DOCTYPE html>
+
+<html lang="jp">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>isf.algorithms.lib.eq_odds &#8212; Intersectional Fairness v0.1.0
+ documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/nature.css" />
+    <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+    <script src="../../../../_static/jquery.js"></script>
+    <script src="../../../../_static/underscore.js"></script>
+    <script src="../../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">Intersectional Fairness v0.1.0
+ documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">isf.algorithms.lib.eq_odds</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for isf.algorithms.lib.eq_odds</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright (c) 2017 Geoff Pleiss</span>
+<span class="c1"># This software includes modifications made by Fujitsu Limited to the original</span>
+<span class="c1"># software licensed under the MIT License. Modified portions of this software</span>
+<span class="c1"># are for the addition of a new parameter threshold and support of</span>
+<span class="c1"># Equal Opportunity in class Model, especially in its functions eq_odds and</span>
+<span class="c1"># eq_odds_optimal_mix_rates.</span>
+<span class="c1">#</span>
+<span class="c1"># https://github.com/gpleiss/equalized_odds_and_calibration/blob/master/LICENSE</span>
+<span class="c1">#</span>
+<span class="c1">#</span>
+<span class="c1"># Copyright 2023 Fujitsu Limited</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+
+<span class="kn">import</span> <span class="nn">cvxpy</span> <span class="k">as</span> <span class="nn">cvx</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">namedtuple</span>
+
+
+<div class="viewcode-block" id="Model"><a class="viewcode-back" href="../../../../algorithms_lib_pak.html#isf.algorithms.lib.eq_odds.Model">[docs]</a><span class="k">class</span> <span class="nc">Model</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s1">&#39;Model&#39;</span><span class="p">,</span> <span class="s1">&#39;pred label threshold&#39;</span><span class="p">)):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Based on the model prediction (accuracy), label true value, and group information divided by sensitive attribute, optimization problem is performed and mix_rate (4 variables that become prediction value conversion rules) is calculated.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    pred : series</span>
+<span class="sd">      Model prediction (probability)</span>
+<span class="sd">    label : series</span>
+<span class="sd">      True label</span>
+<span class="sd">    threshold : float</span>
+<span class="sd">      Threshold for how many positive values are considered positive for model prediction</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    https://github.com/gpleiss/equalized_odds_and_calibration</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="Model.logits"><a class="viewcode-back" href="../../../../algorithms_lib_pak.html#isf.algorithms.lib.eq_odds.Model.logits">[docs]</a>    <span class="k">def</span> <span class="nf">logits</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">raw_logits</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pred</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">pred</span><span class="p">)),</span> <span class="o">-</span><span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">raw_logits</span></div>
+
+<div class="viewcode-block" id="Model.num_samples"><a class="viewcode-back" href="../../../../algorithms_lib_pak.html#isf.algorithms.lib.eq_odds.Model.num_samples">[docs]</a>    <span class="k">def</span> <span class="nf">num_samples</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pred</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Model.base_rate"><a class="viewcode-back" href="../../../../algorithms_lib_pak.html#isf.algorithms.lib.eq_odds.Model.base_rate">[docs]</a>    <span class="k">def</span> <span class="nf">base_rate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Percentage of samples belonging to the positive class</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Model.accuracy"><a class="viewcode-back" href="../../../../algorithms_lib_pak.html#isf.algorithms.lib.eq_odds.Model.accuracy">[docs]</a>    <span class="k">def</span> <span class="nf">accuracy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">accuracies</span><span class="p">()</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Model.precision"><a class="viewcode-back" href="../../../../algorithms_lib_pak.html#isf.algorithms.lib.eq_odds.Model.precision">[docs]</a>    <span class="k">def</span> <span class="nf">precision</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># return (self.label[self.pred.round() == 1]).mean()</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">pred</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">threshold</span><span class="p">])</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Model.recall"><a class="viewcode-back" href="../../../../algorithms_lib_pak.html#isf.algorithms.lib.eq_odds.Model.recall">[docs]</a>    <span class="k">def</span> <span class="nf">recall</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">label</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">round</span><span class="p">())</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Model.tpr"><a class="viewcode-back" href="../../../../algorithms_lib_pak.html#isf.algorithms.lib.eq_odds.Model.tpr">[docs]</a>    <span class="k">def</span> <span class="nf">tpr</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        True positive rate</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># return np.mean(np.logical_and(self.pred.round() == 1, self.label == 1))</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pred</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">threshold</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">label</span> <span class="o">==</span> <span class="mi">1</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="Model.fpr"><a class="viewcode-back" href="../../../../algorithms_lib_pak.html#isf.algorithms.lib.eq_odds.Model.fpr">[docs]</a>    <span class="k">def</span> <span class="nf">fpr</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        False positive rate</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># return np.mean(np.logical_and(self.pred.round() == 1, self.label == 0))</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pred</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">threshold</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">label</span> <span class="o">==</span> <span class="mi">0</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="Model.tnr"><a class="viewcode-back" href="../../../../algorithms_lib_pak.html#isf.algorithms.lib.eq_odds.Model.tnr">[docs]</a>    <span class="k">def</span> <span class="nf">tnr</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        True negative rate</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># return np.mean(np.logical_and(self.pred.round() == 0, self.label == 0))</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pred</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">threshold</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">label</span> <span class="o">==</span> <span class="mi">0</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="Model.fnr"><a class="viewcode-back" href="../../../../algorithms_lib_pak.html#isf.algorithms.lib.eq_odds.Model.fnr">[docs]</a>    <span class="k">def</span> <span class="nf">fnr</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        False negative rate</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># return np.mean(np.logical_and(self.pred.round() == 0, self.label == 1))</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pred</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">threshold</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">label</span> <span class="o">==</span> <span class="mi">1</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="Model.fn_cost"><a class="viewcode-back" href="../../../../algorithms_lib_pak.html#isf.algorithms.lib.eq_odds.Model.fn_cost">[docs]</a>    <span class="k">def</span> <span class="nf">fn_cost</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generalized false negative cost</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">pred</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">label</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Model.fp_cost"><a class="viewcode-back" href="../../../../algorithms_lib_pak.html#isf.algorithms.lib.eq_odds.Model.fp_cost">[docs]</a>    <span class="k">def</span> <span class="nf">fp_cost</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generalized false positive cost</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pred</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">label</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Model.accuracies"><a class="viewcode-back" href="../../../../algorithms_lib_pak.html#isf.algorithms.lib.eq_odds.Model.accuracies">[docs]</a>    <span class="k">def</span> <span class="nf">accuracies</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pred</span><span class="o">.</span><span class="n">round</span><span class="p">()</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">label</span></div>
+
+<div class="viewcode-block" id="Model.eq_odds"><a class="viewcode-back" href="../../../../algorithms_lib_pak.html#isf.algorithms.lib.eq_odds.Model.eq_odds">[docs]</a>    <span class="k">def</span> <span class="nf">eq_odds</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">othr</span><span class="p">,</span> <span class="n">mix_rates</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">metric</span><span class="o">=</span><span class="s1">&#39;EqualOpportunity&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Based on the model prediction (accuracy), label true value, and group information divided by protection attribute, optimization problem is performed and mix_rate (4 variables that become prediction value conversion rules) is calculated.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        othr : Model</span>
+<span class="sd">            input model</span>
+<span class="sd">        mix_rates : tuple, optional</span>
+<span class="sd">            model parameter</span>
+<span class="sd">            If None, calculate internally</span>
+<span class="sd">        threshold : float, optional</span>
+<span class="sd">            Threshold for how many positive values are considered positive for model prediction</span>
+<span class="sd">        metric : String</span>
+<span class="sd">            Used for constraint terms in optimization problems.[&#39;EqualOpportunity&#39;,&lt;any&gt;]</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        fair_self : Model</span>
+<span class="sd">            self-model after debiasing</span>
+<span class="sd">        fair_othr : Model</span>
+<span class="sd">            othr-model after debiasing</span>
+<span class="sd">        mix_rates : tuple</span>
+<span class="sd">            model parameter</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">has_mix_rates</span> <span class="o">=</span> <span class="ow">not</span> <span class="p">(</span><span class="n">mix_rates</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">has_mix_rates</span><span class="p">:</span>
+            <span class="n">mix_rates</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">eq_odds_optimal_mix_rates</span><span class="p">(</span><span class="n">othr</span><span class="p">,</span> <span class="n">metric</span><span class="p">)</span>
+        <span class="n">sp2p</span><span class="p">,</span> <span class="n">sn2p</span><span class="p">,</span> <span class="n">op2p</span><span class="p">,</span> <span class="n">on2p</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">mix_rates</span><span class="p">)</span>
+
+        <span class="n">self_fair_pred</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pred</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="c1"># self_pp_indices, = np.nonzero(self.pred.round())</span>
+        <span class="c1"># self_pn_indices, = np.nonzero(1 - self.pred.round())</span>
+        <span class="n">self_pp_indices</span><span class="p">,</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pred</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">threshold</span><span class="p">)</span>
+        <span class="n">self_pn_indices</span><span class="p">,</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pred</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">threshold</span><span class="p">)</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">self_pp_indices</span><span class="p">)</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">self_pn_indices</span><span class="p">)</span>
+
+        <span class="n">n2p_indices</span> <span class="o">=</span> <span class="n">self_pn_indices</span><span class="p">[:</span><span class="nb">int</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">self_pn_indices</span><span class="p">)</span> <span class="o">*</span> <span class="n">sn2p</span><span class="p">)]</span>
+        <span class="n">self_fair_pred</span><span class="p">[</span><span class="n">n2p_indices</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">self_fair_pred</span><span class="p">[</span><span class="n">n2p_indices</span><span class="p">]</span>
+        <span class="n">p2n_indices</span> <span class="o">=</span> <span class="n">self_pp_indices</span><span class="p">[:</span><span class="nb">int</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">self_pp_indices</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">sp2p</span><span class="p">))]</span>
+        <span class="n">self_fair_pred</span><span class="p">[</span><span class="n">p2n_indices</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">self_fair_pred</span><span class="p">[</span><span class="n">p2n_indices</span><span class="p">]</span>
+
+        <span class="n">othr_fair_pred</span> <span class="o">=</span> <span class="n">othr</span><span class="o">.</span><span class="n">pred</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="c1"># othr_pp_indices, = np.nonzero(othr.pred.round())</span>
+        <span class="c1"># othr_pn_indices, = np.nonzero(1 - othr.pred.round())</span>
+        <span class="n">othr_pp_indices</span><span class="p">,</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">othr</span><span class="o">.</span><span class="n">pred</span> <span class="o">&gt;</span> <span class="n">othr</span><span class="o">.</span><span class="n">threshold</span><span class="p">)</span>
+        <span class="n">othr_pn_indices</span><span class="p">,</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="p">(</span><span class="n">othr</span><span class="o">.</span><span class="n">pred</span> <span class="o">&lt;=</span> <span class="n">othr</span><span class="o">.</span><span class="n">threshold</span><span class="p">))</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">othr_pp_indices</span><span class="p">)</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">othr_pn_indices</span><span class="p">)</span>
+
+        <span class="n">n2p_indices</span> <span class="o">=</span> <span class="n">othr_pn_indices</span><span class="p">[:</span><span class="nb">int</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">othr_pn_indices</span><span class="p">)</span> <span class="o">*</span> <span class="n">on2p</span><span class="p">)]</span>
+        <span class="n">othr_fair_pred</span><span class="p">[</span><span class="n">n2p_indices</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">othr_fair_pred</span><span class="p">[</span><span class="n">n2p_indices</span><span class="p">]</span>
+        <span class="n">p2n_indices</span> <span class="o">=</span> <span class="n">othr_pp_indices</span><span class="p">[:</span><span class="nb">int</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">othr_pp_indices</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">op2p</span><span class="p">))]</span>
+        <span class="n">othr_fair_pred</span><span class="p">[</span><span class="n">p2n_indices</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">othr_fair_pred</span><span class="p">[</span><span class="n">p2n_indices</span><span class="p">]</span>
+
+        <span class="n">fair_self</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="n">self_fair_pred</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">,</span> <span class="n">threshold</span><span class="p">)</span>
+        <span class="n">fair_othr</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="n">othr_fair_pred</span><span class="p">,</span> <span class="n">othr</span><span class="o">.</span><span class="n">label</span><span class="p">,</span> <span class="n">threshold</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">has_mix_rates</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">fair_self</span><span class="p">,</span> <span class="n">fair_othr</span><span class="p">,</span> <span class="n">mix_rates</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">fair_self</span><span class="p">,</span> <span class="n">fair_othr</span></div>
+
+<div class="viewcode-block" id="Model.eq_odds_optimal_mix_rates"><a class="viewcode-back" href="../../../../algorithms_lib_pak.html#isf.algorithms.lib.eq_odds.Model.eq_odds_optimal_mix_rates">[docs]</a>    <span class="k">def</span> <span class="nf">eq_odds_optimal_mix_rates</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">othr</span><span class="p">,</span> <span class="n">metric</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate the mix_rate (4 variables that are the conversion rules for predicted values) in the optimization problem</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        othr : Model</span>
+<span class="sd">            input model</span>
+
+<span class="sd">        metric : String</span>
+<span class="sd">            Used for constraint terms in optimization problems.[&#39;EqualOpportunity&#39;,&lt;any&gt;]</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        res : array</span>
+<span class="sd">            mix_rate</span>
+<span class="sd">            [sp2p, sn2p, op2p, on2p]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">sbr</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base_rate</span><span class="p">())</span>
+        <span class="n">obr</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">othr</span><span class="o">.</span><span class="n">base_rate</span><span class="p">())</span>
+
+        <span class="n">sp2p</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">sp2n</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">sn2p</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">sn2n</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">op2p</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">op2n</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">on2p</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">on2n</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">sfpr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fpr</span><span class="p">()</span> <span class="o">*</span> <span class="n">sp2p</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">tnr</span><span class="p">()</span> <span class="o">*</span> <span class="n">sn2p</span>
+        <span class="n">sfnr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fnr</span><span class="p">()</span> <span class="o">*</span> <span class="n">sn2n</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">tpr</span><span class="p">()</span> <span class="o">*</span> <span class="n">sp2n</span>
+        <span class="n">ofpr</span> <span class="o">=</span> <span class="n">othr</span><span class="o">.</span><span class="n">fpr</span><span class="p">()</span> <span class="o">*</span> <span class="n">op2p</span> <span class="o">+</span> <span class="n">othr</span><span class="o">.</span><span class="n">tnr</span><span class="p">()</span> <span class="o">*</span> <span class="n">on2p</span>
+        <span class="n">ofnr</span> <span class="o">=</span> <span class="n">othr</span><span class="o">.</span><span class="n">fnr</span><span class="p">()</span> <span class="o">*</span> <span class="n">on2n</span> <span class="o">+</span> <span class="n">othr</span><span class="o">.</span><span class="n">tpr</span><span class="p">()</span> <span class="o">*</span> <span class="n">op2n</span>
+        <span class="n">error</span> <span class="o">=</span> <span class="n">sfpr</span> <span class="o">+</span> <span class="n">sfnr</span> <span class="o">+</span> <span class="n">ofpr</span> <span class="o">+</span> <span class="n">ofnr</span>
+
+        <span class="n">sflip</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">pred</span>
+        <span class="n">sconst</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pred</span>
+        <span class="n">oflip</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">othr</span><span class="o">.</span><span class="n">pred</span>
+        <span class="n">oconst</span> <span class="o">=</span> <span class="n">othr</span><span class="o">.</span><span class="n">pred</span>
+
+        <span class="c1"># sm_tn = np.logical_and(self.pred.round() == 0, self.label == 0)</span>
+        <span class="c1"># sm_fn = np.logical_and(self.pred.round() == 0, self.label == 1)</span>
+        <span class="c1"># sm_tp = np.logical_and(self.pred.round() == 1, self.label == 1)</span>
+        <span class="c1"># sm_fp = np.logical_and(self.pred.round() == 1, self.label == 0)</span>
+        <span class="n">sm_tn</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pred</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">threshold</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">label</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">sm_fn</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pred</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">threshold</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">label</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">sm_tp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pred</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">threshold</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">label</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">sm_fp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pred</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">threshold</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">label</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+
+        <span class="n">om_tn</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="n">othr</span><span class="o">.</span><span class="n">pred</span> <span class="o">&lt;=</span> <span class="n">othr</span><span class="o">.</span><span class="n">threshold</span><span class="p">,</span> <span class="n">othr</span><span class="o">.</span><span class="n">label</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">om_fn</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="n">othr</span><span class="o">.</span><span class="n">pred</span> <span class="o">&lt;=</span> <span class="n">othr</span><span class="o">.</span><span class="n">threshold</span><span class="p">,</span> <span class="n">othr</span><span class="o">.</span><span class="n">label</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">om_tp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="n">othr</span><span class="o">.</span><span class="n">pred</span> <span class="o">&gt;</span> <span class="n">othr</span><span class="o">.</span><span class="n">threshold</span><span class="p">,</span> <span class="n">othr</span><span class="o">.</span><span class="n">label</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">om_fp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="n">othr</span><span class="o">.</span><span class="n">pred</span> <span class="o">&gt;</span> <span class="n">othr</span><span class="o">.</span><span class="n">threshold</span><span class="p">,</span> <span class="n">othr</span><span class="o">.</span><span class="n">label</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+
+        <span class="c1">#        average of N-probability for FN cases       average of P-probability of FN cases</span>
+        <span class="n">spn_given_p</span> <span class="o">=</span> <span class="p">(</span><span class="n">sn2p</span> <span class="o">*</span> <span class="p">(</span><span class="n">sflip</span> <span class="o">*</span> <span class="n">sm_fn</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">+</span> <span class="n">sn2n</span> <span class="o">*</span> <span class="p">(</span><span class="n">sconst</span> <span class="o">*</span> <span class="n">sm_fn</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span> <span class="o">/</span> <span class="n">sbr</span> <span class="o">+</span> \
+                      <span class="p">(</span><span class="n">sp2p</span> <span class="o">*</span> <span class="p">(</span><span class="n">sconst</span> <span class="o">*</span> <span class="n">sm_tp</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">+</span> <span class="n">sp2n</span> <span class="o">*</span> <span class="p">(</span><span class="n">sflip</span> <span class="o">*</span> <span class="n">sm_tp</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span> <span class="o">/</span> <span class="n">sbr</span>
+        <span class="c1">#        average of P-probability for TP cases       average of N-probability of TP cases</span>
+
+        <span class="n">spp_given_n</span> <span class="o">=</span> <span class="p">(</span><span class="n">sp2n</span> <span class="o">*</span> <span class="p">(</span><span class="n">sflip</span> <span class="o">*</span> <span class="n">sm_fp</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">+</span> <span class="n">sp2p</span> <span class="o">*</span> <span class="p">(</span><span class="n">sconst</span> <span class="o">*</span> <span class="n">sm_fp</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">sbr</span><span class="p">)</span> <span class="o">+</span> \
+                      <span class="p">(</span><span class="n">sn2p</span> <span class="o">*</span> <span class="p">(</span><span class="n">sflip</span> <span class="o">*</span> <span class="n">sm_tn</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">+</span> <span class="n">sn2n</span> <span class="o">*</span> <span class="p">(</span><span class="n">sconst</span> <span class="o">*</span> <span class="n">sm_tn</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">sbr</span><span class="p">)</span>
+
+        <span class="n">opn_given_p</span> <span class="o">=</span> <span class="p">(</span><span class="n">on2p</span> <span class="o">*</span> <span class="p">(</span><span class="n">oflip</span> <span class="o">*</span> <span class="n">om_fn</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">+</span> <span class="n">on2n</span> <span class="o">*</span> <span class="p">(</span><span class="n">oconst</span> <span class="o">*</span> <span class="n">om_fn</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span> <span class="o">/</span> <span class="n">obr</span> <span class="o">+</span> \
+                      <span class="p">(</span><span class="n">op2p</span> <span class="o">*</span> <span class="p">(</span><span class="n">oconst</span> <span class="o">*</span> <span class="n">om_tp</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">+</span> <span class="n">op2n</span> <span class="o">*</span> <span class="p">(</span><span class="n">oflip</span> <span class="o">*</span> <span class="n">om_tp</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span> <span class="o">/</span> <span class="n">obr</span>
+
+        <span class="n">opp_given_n</span> <span class="o">=</span> <span class="p">(</span><span class="n">op2n</span> <span class="o">*</span> <span class="p">(</span><span class="n">oflip</span> <span class="o">*</span> <span class="n">om_fp</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">+</span> <span class="n">op2p</span> <span class="o">*</span> <span class="p">(</span><span class="n">oconst</span> <span class="o">*</span> <span class="n">om_fp</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">obr</span><span class="p">)</span> <span class="o">+</span> \
+                      <span class="p">(</span><span class="n">on2p</span> <span class="o">*</span> <span class="p">(</span><span class="n">oflip</span> <span class="o">*</span> <span class="n">om_tn</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">+</span> <span class="n">on2n</span> <span class="o">*</span> <span class="p">(</span><span class="n">oconst</span> <span class="o">*</span> <span class="n">om_tn</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">obr</span><span class="p">)</span>
+
+        <span class="n">constraints</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">sp2p</span> <span class="o">==</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">sp2n</span><span class="p">,</span>
+            <span class="n">sn2p</span> <span class="o">==</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">sn2n</span><span class="p">,</span>
+            <span class="n">op2p</span> <span class="o">==</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">op2n</span><span class="p">,</span>
+            <span class="n">on2p</span> <span class="o">==</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">on2n</span><span class="p">,</span>
+            <span class="n">sp2p</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="n">sp2p</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="n">sn2p</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="n">sn2p</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="n">op2p</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="n">op2p</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="n">on2p</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="n">on2p</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="n">spp_given_n</span> <span class="o">==</span> <span class="n">opp_given_n</span><span class="p">,</span>
+            <span class="n">spn_given_p</span> <span class="o">==</span> <span class="n">opn_given_p</span><span class="p">,</span>
+        <span class="p">]</span>
+        <span class="k">if</span> <span class="n">metric</span> <span class="o">==</span> <span class="s1">&#39;EqualOpportunity&#39;</span><span class="p">:</span>
+            <span class="n">constraints</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">sp2p</span> <span class="o">==</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">sp2n</span><span class="p">,</span>
+                <span class="n">sn2p</span> <span class="o">==</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">sn2n</span><span class="p">,</span>
+                <span class="n">op2p</span> <span class="o">==</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">op2n</span><span class="p">,</span>
+                <span class="n">on2p</span> <span class="o">==</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">on2n</span><span class="p">,</span>
+                <span class="n">sp2p</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">,</span>
+                <span class="n">sp2p</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">,</span>
+                <span class="n">sn2p</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">,</span>
+                <span class="n">sn2p</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">,</span>
+                <span class="n">op2p</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">,</span>
+                <span class="n">op2p</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">,</span>
+                <span class="n">on2p</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">,</span>
+                <span class="n">on2p</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">,</span>
+                <span class="n">spn_given_p</span> <span class="o">==</span> <span class="n">opn_given_p</span><span class="p">,</span>
+            <span class="p">]</span>
+
+        <span class="n">prob</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Problem</span><span class="p">(</span><span class="n">cvx</span><span class="o">.</span><span class="n">Minimize</span><span class="p">(</span><span class="n">error</span><span class="p">),</span> <span class="n">constraints</span><span class="p">)</span>
+        <span class="n">prob</span><span class="o">.</span><span class="n">solve</span><span class="p">()</span>
+
+        <span class="n">res</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">sp2p</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">sn2p</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">op2p</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">on2p</span><span class="o">.</span><span class="n">value</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">res</span></div>
+
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span>
+            <span class="s1">&#39;Accuracy:</span><span class="se">\t</span><span class="si">%.3f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">accuracy</span><span class="p">(),</span>
+            <span class="s1">&#39;F.P. cost:</span><span class="se">\t</span><span class="si">%.3f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">fp_cost</span><span class="p">(),</span>
+            <span class="s1">&#39;F.N. cost:</span><span class="se">\t</span><span class="si">%.3f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">fn_cost</span><span class="p">(),</span>
+            <span class="s1">&#39;Base rate:</span><span class="se">\t</span><span class="si">%.3f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_rate</span><span class="p">(),</span>
+            <span class="s1">&#39;Avg. score:</span><span class="se">\t</span><span class="si">%.3f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">pred</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span>
+        <span class="p">])</span></div>
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">Intersectional Fairness v0.1.0
+ documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">isf.algorithms.lib.eq_odds</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2023, Fujitsu Limited.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.1.1.
+    </div>
+  </body>
+</html>

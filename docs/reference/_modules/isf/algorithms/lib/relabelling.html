@@ -1,0 +1,222 @@
+
+<!DOCTYPE html>
+
+<html lang="jp">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>isf.algorithms.lib.relabelling &#8212; Intersectional Fairness v0.1.0
+ documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/nature.css" />
+    <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+    <script src="../../../../_static/jquery.js"></script>
+    <script src="../../../../_static/underscore.js"></script>
+    <script src="../../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">Intersectional Fairness v0.1.0
+ documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">isf.algorithms.lib.relabelling</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for isf.algorithms.lib.relabelling</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright (c) 2017 Niels Bantilan</span>
+<span class="c1"># This software includes modifications made by Fujitsu Limited to the original</span>
+<span class="c1"># software licensed under the MIT License. Modified portions of this software</span>
+<span class="c1"># are the modification of the condition to correct target labels especially in</span>
+<span class="c1"># functions _n_relabels, _relabel and _relabel_targets.</span>
+<span class="c1">#</span>
+<span class="c1"># https://github.com/cosmicBboy/themis-ml/blob/master/LICENSE</span>
+<span class="c1">#</span>
+<span class="c1">#</span>
+<span class="c1"># Copyright 2023 Fujitsu Limited</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+
+<span class="sd">&quot;&quot;&quot;Relabel examples in a dataset for fairness-aware model training.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">math</span>
+
+<span class="kn">from</span> <span class="nn">sklearn.base</span> <span class="kn">import</span> <span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">TransformerMixin</span><span class="p">,</span> <span class="n">MetaEstimatorMixin</span>
+<span class="kn">from</span> <span class="nn">sklearn.utils.validation</span> <span class="kn">import</span> <span class="n">check_array</span><span class="p">,</span> <span class="n">check_X_y</span><span class="p">,</span> <span class="n">check_is_fitted</span>
+<span class="kn">from</span> <span class="nn">sklearn.linear_model</span> <span class="kn">import</span> <span class="n">LogisticRegression</span>
+
+<span class="kn">from</span> <span class="nn">isf.algorithms.lib.checks</span> <span class="kn">import</span> <span class="n">check_binary</span>
+<span class="kn">from</span> <span class="nn">isf.utils.common</span> <span class="kn">import</span> <span class="n">get_baseline</span>
+
+
+<span class="k">def</span> <span class="nf">_n_relabels</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">s</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute the number of promotions/demotions that need to occur.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    y : np.array</span>
+<span class="sd">        Target labels</span>
+<span class="sd">    s : np.array</span>
+<span class="sd">        Sensitive class labels</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    return value : int</span>
+<span class="sd">        Number of promotions/demotions to occur.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">total</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">s</span><span class="p">))</span>
+    <span class="n">s1</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+    <span class="n">s0</span> <span class="o">=</span> <span class="n">total</span> <span class="o">-</span> <span class="n">s1</span>
+    <span class="n">s1_positive</span> <span class="o">=</span> <span class="p">((</span><span class="n">s</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">y</span> <span class="o">==</span> <span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+    <span class="n">s0_positive</span> <span class="o">=</span> <span class="p">((</span><span class="n">s</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">y</span> <span class="o">==</span> <span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+    <span class="c1"># return int(math.ceil(((s1 * s0_positive) - (s0 * s1_positive)) / total))</span>
+    <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(((</span><span class="n">s0</span> <span class="o">*</span> <span class="n">s1_positive</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="n">s1</span> <span class="o">*</span> <span class="n">s0_positive</span><span class="p">))</span> <span class="o">/</span> <span class="n">total</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">_relabel</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">promote_ranks</span><span class="p">,</span> <span class="n">demote_ranks</span><span class="p">,</span> <span class="n">n_relabels</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">n_relabels</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">if</span> <span class="p">((</span><span class="ow">not</span> <span class="n">s</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">y</span> <span class="ow">and</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">promote_ranks</span><span class="p">)</span> <span class="ow">or</span>
+                <span class="p">(</span><span class="n">s</span> <span class="ow">and</span> <span class="n">y</span> <span class="ow">and</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">demote_ranks</span><span class="p">)):</span>
+            <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="ow">not</span> <span class="n">y</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">y</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="p">((</span><span class="n">s</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">y</span> <span class="ow">and</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">promote_ranks</span><span class="p">)</span> <span class="ow">or</span>
+                <span class="p">(</span><span class="ow">not</span> <span class="n">s</span> <span class="ow">and</span> <span class="n">y</span> <span class="ow">and</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">demote_ranks</span><span class="p">)):</span>
+            <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="ow">not</span> <span class="n">y</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">y</span>
+
+
+<span class="k">def</span> <span class="nf">_relabel_targets</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">ranks</span><span class="p">,</span> <span class="n">n_relabels</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Compute relabelled targets based on predicted ranks.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">n_relabels</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">demote_ranks</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">ranks</span><span class="p">[(</span><span class="n">s</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">y</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)])[:</span><span class="n">n_relabels</span><span class="p">])</span>
+        <span class="n">promote_ranks</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">ranks</span><span class="p">[(</span><span class="n">s</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">y</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)])[</span><span class="o">-</span><span class="n">n_relabels</span><span class="p">:])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">demote_ranks</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">ranks</span><span class="p">[(</span><span class="n">s</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">y</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)])[:</span><span class="o">-</span><span class="n">n_relabels</span><span class="p">])</span>
+        <span class="n">promote_ranks</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">ranks</span><span class="p">[(</span><span class="n">s</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">y</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)])[</span><span class="n">n_relabels</span><span class="p">:])</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
+        <span class="n">_relabel</span><span class="p">(</span><span class="n">_y</span><span class="p">,</span> <span class="n">_s</span><span class="p">,</span> <span class="n">_r</span><span class="p">,</span> <span class="n">promote_ranks</span><span class="p">,</span> <span class="n">demote_ranks</span><span class="p">,</span> <span class="n">n_relabels</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">_y</span><span class="p">,</span> <span class="n">_s</span><span class="p">,</span> <span class="n">_r</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">ranks</span><span class="p">)])</span>
+
+
+<div class="viewcode-block" id="Relabeller"><a class="viewcode-back" href="../../../../algorithms_lib_pak.html#isf.algorithms.lib.relabelling.Relabeller">[docs]</a><span class="k">class</span> <span class="nc">Relabeller</span><span class="p">(</span><span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">TransformerMixin</span><span class="p">,</span> <span class="n">MetaEstimatorMixin</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ranker</span><span class="o">=</span><span class="n">LogisticRegression</span><span class="p">()):</span>
+        <span class="sd">&quot;&quot;&quot;Create a Relabeller.</span>
+
+<span class="sd">        This technique relabels target variables using a function that can</span>
+<span class="sd">        compute a decision boundary in input data space using the following</span>
+<span class="sd">        heuristic</span>
+
+<span class="sd">        - The top `n` -ve labelled observations in the disadvantaged group `s1`</span>
+<span class="sd">          that are closest to the decision boundary are &quot;promoted&quot; to the +ve</span>
+<span class="sd">          label.</span>
+<span class="sd">        - the top `n` +ve labelled observations in the advantaged group s0</span>
+<span class="sd">          closest to the decision boundary are &quot;demoted&#39; to the -ve label.</span>
+
+<span class="sd">        `n` is the number of promotions/demotions needed to make</span>
+<span class="sd">        p(+|s0) = p(+|s1)</span>
+
+<span class="sd">        :param BaseEstimator ranker: estimator to use as the ranker for</span>
+<span class="sd">            relabelling observations close to the decision boundary. Default:</span>
+<span class="sd">            LogisticRegression</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ranker</span> <span class="o">=</span> <span class="n">ranker</span>
+
+<div class="viewcode-block" id="Relabeller.fit"><a class="viewcode-back" href="../../../../algorithms_lib_pak.html#isf.algorithms.lib.relabelling.Relabeller.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit relabeller.&quot;&quot;&quot;</span>
+        <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">check_X_y</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">check_binary</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">check_binary</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">s</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;`s` must be the same shape as `y`&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_relabels_</span> <span class="o">=</span> <span class="n">_n_relabels</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">s</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ranks_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ranker</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">X</span><span class="p">)[:,</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="n">best_accuracy</span> <span class="o">=</span> <span class="n">get_baseline</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ranks_</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">X_</span> <span class="o">=</span> <span class="n">X</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y_</span> <span class="o">=</span> <span class="n">y</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">s_</span> <span class="o">=</span> <span class="n">s</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="p">,</span> <span class="n">best_accuracy</span></div>
+
+<div class="viewcode-block" id="Relabeller.transform"><a class="viewcode-back" href="../../../../algorithms_lib_pak.html#isf.algorithms.lib.relabelling.Relabeller.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Transform relabeller.&quot;&quot;&quot;</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;n_relabels_&quot;</span><span class="p">,</span> <span class="s2">&quot;ranks_&quot;</span><span class="p">])</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="c1"># Input X should be equal to the input to `fit`</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;`transform` input X must be equal to input X to `fit`&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_relabel_targets</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">y_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">s_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ranks_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_relabels_</span><span class="p">)</span></div></div>
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">Intersectional Fairness v0.1.0
+ documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">isf.algorithms.lib.relabelling</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2023, Fujitsu Limited.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.1.1.
+    </div>
+  </body>
+</html>

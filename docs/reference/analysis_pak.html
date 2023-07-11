@@ -1,0 +1,177 @@
+
+<!DOCTYPE html>
+
+<html lang="jp">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>isf.analysis.intersectional_bias &#8212; Intersectional Fairness v0.1.0
+ documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/nature.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="isf.core.intersectional_fairness" href="core_pak.html" />
+    <link rel="prev" title="isf.algorithms.lib.checks" href="algorithms_lib_pak.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="core_pak.html" title="isf.core.intersectional_fairness"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="algorithms_lib_pak.html" title="isf.algorithms.lib.checks"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Intersectional Fairness v0.1.0
+ documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">isf.analysis.intersectional_bias</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="module-isf.analysis.intersectional_bias">
+<span id="isf-analysis-intersectional-bias"></span><h1>isf.analysis.intersectional_bias<a class="headerlink" href="#module-isf.analysis.intersectional_bias" title="Permalink to this heading">¶</a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="isf.analysis.intersectional_bias.calc_intersectionalbias">
+<span class="sig-prename descclassname"><span class="pre">isf.analysis.intersectional_bias.</span></span><span class="sig-name descname"><span class="pre">calc_intersectionalbias</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metric</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'DispareteImpact'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/isf/analysis/intersectional_bias.html#calc_intersectionalbias"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#isf.analysis.intersectional_bias.calc_intersectionalbias" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate intersectional bias(DisparateImpact) by more than one sensitive attributes</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataset</strong> (<em>StructuredDataset</em>) -- A dataset containing more than one sensitive attributes</p></li>
+<li><p><strong>metric</strong> (<em>str</em>) -- Fairness metric name
+[&quot;DispareteImpact&quot;]</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>df_result</strong> -- Intersectional bias(DisparateImpact)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="isf.analysis.intersectional_bias.calc_intersectionalbias_matrix">
+<span class="sig-prename descclassname"><span class="pre">isf.analysis.intersectional_bias.</span></span><span class="sig-name descname"><span class="pre">calc_intersectionalbias_matrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metric</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'DispareteImpact'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/isf/analysis/intersectional_bias.html#calc_intersectionalbias_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#isf.analysis.intersectional_bias.calc_intersectionalbias_matrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Comparison drawing of intersectional bias in heat map</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataset</strong> (<em>StructuredDataset</em>) -- Dataset containing two sensitive attributes</p></li>
+<li><p><strong>metric</strong> (<em>str</em>) -- Fairness metric name
+[&quot;DispareteImpact&quot;]</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>df_result</strong> -- Intersectional bias(DisparateImpact)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="isf.analysis.intersectional_bias.plot_intersectionalbias_compare">
+<span class="sig-prename descclassname"><span class="pre">isf.analysis.intersectional_bias.</span></span><span class="sig-name descname"><span class="pre">plot_intersectionalbias_compare</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ds_bef</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ds_aft</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vmin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">center</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metric</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'DispareteImpact'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{'left':</span> <span class="pre">'after',</span> <span class="pre">'right':</span> <span class="pre">'before'}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/isf/analysis/intersectional_bias.html#plot_intersectionalbias_compare"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#isf.analysis.intersectional_bias.plot_intersectionalbias_compare" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compare drawing of intersectional bias in heat map</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ds_bef</strong> (<em>StructuredDataset</em>) -- Dataset containing two sensitive attributes (left figure)</p></li>
+<li><p><strong>ds_aft</strong> (<em>StructuredDataset</em>) -- Dataset containing two sensitive attributes (right figure)</p></li>
+<li><p><strong>filename</strong> (<em>str</em><em>, </em><em>optional</em>) -- File name(png)
+e.g. &quot;./result/pict.png&quot;</p></li>
+<li><p><strong>metric</strong> (<em>str</em>) -- Fairness metric name
+[&quot;DispareteImpact&quot;]</p></li>
+<li><p><strong>title</strong> (<em>dictonary</em><em>, </em><em>optional</em>) -- Graph title (right figure, left figure)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="algorithms_lib_pak.html"
+                          title="previous chapter">isf.algorithms.lib.checks</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="core_pak.html"
+                          title="next chapter">isf.core.intersectional_fairness</a></p>
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/analysis_pak.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="core_pak.html" title="isf.core.intersectional_fairness"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="algorithms_lib_pak.html" title="isf.algorithms.lib.checks"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Intersectional Fairness v0.1.0
+ documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">isf.analysis.intersectional_bias</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2023, Fujitsu Limited.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.1.1.
+    </div>
+  </body>
+</html>

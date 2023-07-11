@@ -1,0 +1,23 @@
+isf.algorithms.lib.checks
+=========================
+
+.. automodule:: isf.algorithms.lib.checks
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+isf.algorithms.lib.eq_odds
+==========================
+
+.. automodule:: isf.algorithms.lib.eq_odds
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+isf.algorithms.lib.relabelling
+==============================
+
+.. automodule:: isf.algorithms.lib.relabelling
+   :members:
+   :undoc-members:
+   :show-inheritance:

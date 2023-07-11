@@ -1,0 +1,247 @@
+
+<!DOCTYPE html>
+
+<html lang="jp">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>isf.metrics.disparate_impact &#8212; Intersectional Fairness v0.1.0
+ documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/nature.css" />
+    <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">Intersectional Fairness v0.1.0
+ documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">isf.metrics.disparate_impact</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for isf.metrics.disparate_impact</h1><div class="highlight"><pre>
+<span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="c1"># Copyright 2023 Fujitsu Limited</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">matplotlib.cm</span> <span class="k">as</span> <span class="nn">cm</span>
+
+
+<div class="viewcode-block" id="DisparateImpact"><a class="viewcode-back" href="../../../metrics_pak.html#isf.metrics.disparate_impact.DisparateImpact">[docs]</a><span class="k">class</span> <span class="nc">DisparateImpact</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate Disparate Impact score</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="DisparateImpact.bias_predict"><a class="viewcode-back" href="../../../metrics_pak.html#isf.metrics.disparate_impact.DisparateImpact.bias_predict">[docs]</a>    <span class="k">def</span> <span class="nf">bias_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">,</span> <span class="n">protected_attr_info</span><span class="p">,</span> <span class="n">label_info</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">calc_di</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">protected_attr_info</span><span class="p">,</span> <span class="n">label_info</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DisparateImpact.calc_di"><a class="viewcode-back" href="../../../metrics_pak.html#isf.metrics.disparate_impact.DisparateImpact.calc_di">[docs]</a>    <span class="k">def</span> <span class="nf">calc_di</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">,</span> <span class="n">protected_attr_info</span><span class="p">,</span> <span class="n">label_info</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate Disparate Impact score</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        df : DataFrame</span>
+<span class="sd">            DataFrame containing sensitive attributes and label</span>
+<span class="sd">        sensitive : dictionary</span>
+<span class="sd">            Privileged group (sensitive attribute name : attribute value)</span>
+<span class="sd">            e.g. {&#39;Gender&#39;:1.0,&#39;Race&#39;:&#39;black&#39;}</span>
+<span class="sd">        label_info : dictionary</span>
+<span class="sd">            Label definition (label attribute name : attribute values)</span>
+<span class="sd">            e.g. {&#39;denied&#39;:1.0}</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        return value : float</span>
+<span class="sd">            Disparete Impact score</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">df_bunshi</span><span class="p">,</span> <span class="n">df_bunbo</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">calc_privilege_group</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">protected_attr_info</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">df_bunshi</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">df_bunbo</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+        <span class="n">label</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">label_info</span><span class="o">.</span><span class="n">keys</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">privileged_value</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">label_info</span><span class="o">.</span><span class="n">values</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">a</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">df_bunshi</span><span class="p">[</span><span class="n">df_bunshi</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">==</span> <span class="n">privileged_value</span><span class="p">])</span>
+        <span class="n">b</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">df_bunbo</span><span class="p">[</span><span class="n">df_bunbo</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">==</span> <span class="n">privileged_value</span><span class="p">])</span>
+
+        <span class="n">bunshi_rate</span> <span class="o">=</span> <span class="n">a</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">df_bunshi</span><span class="p">)</span>
+        <span class="n">bunbo_rate</span> <span class="o">=</span> <span class="n">b</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">df_bunbo</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">bunbo_rate</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+        <span class="k">return</span> <span class="p">(</span><span class="n">bunshi_rate</span><span class="o">/</span><span class="n">bunbo_rate</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DisparateImpact.calc_di_attribute"><a class="viewcode-back" href="../../../metrics_pak.html#isf.metrics.disparate_impact.DisparateImpact.calc_di_attribute">[docs]</a>    <span class="k">def</span> <span class="nf">calc_di_attribute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">,</span> <span class="n">protected_attr</span><span class="p">,</span> <span class="n">label_info</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Specify sensitive attribute name and calculate disparete impact score for each attribute value</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        df : DataFrame</span>
+<span class="sd">            DataFrame containing sensitive attribute and label</span>
+<span class="sd">        protected_attr : str</span>
+<span class="sd">            Sensitive attribute name</span>
+<span class="sd">            e.g. &#39;female&#39;</span>
+<span class="sd">        label_info : dictionary</span>
+<span class="sd">            Label definition (label attribute name : attribute values)</span>
+<span class="sd">            e.g. {&#39;denied&#39;:1.0}</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dic_di : dictionary</span>
+<span class="sd">            {attribute value: Disparete Impact score, ...}</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">dic_di</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">privileged_value</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">protected_attr</span><span class="p">])):</span>
+            <span class="n">di</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">calc_di</span><span class="p">(</span><span class="n">df</span><span class="p">,</span>
+                              <span class="n">protected_attr_info</span><span class="o">=</span><span class="p">{</span><span class="n">protected_attr</span><span class="p">:</span> <span class="n">privileged_value</span><span class="p">},</span>
+                              <span class="n">label_info</span><span class="o">=</span><span class="n">label_info</span><span class="p">)</span>
+            <span class="n">dic_di</span><span class="p">[</span><span class="n">privileged_value</span><span class="p">]</span> <span class="o">=</span> <span class="n">di</span>
+        <span class="k">return</span> <span class="n">dic_di</span></div>
+
+<div class="viewcode-block" id="DisparateImpact.plot_di_attribute"><a class="viewcode-back" href="../../../metrics_pak.html#isf.metrics.disparate_impact.DisparateImpact.plot_di_attribute">[docs]</a>    <span class="k">def</span> <span class="nf">plot_di_attribute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dic_di</span><span class="p">,</span> <span class="n">target_attr</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Draw the disparete impact score in a bar chart</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dic_di : dictionary</span>
+<span class="sd">            Disparete impact score</span>
+<span class="sd">            {attribute value: disparete impact score, ...}</span>
+<span class="sd">        target_attr : str</span>
+<span class="sd">            Sensitive attribute name</span>
+<span class="sd">            e.g. &#39;female&#39;</span>
+<span class="sd">        filename : str, optional</span>
+<span class="sd">            File name(png)</span>
+<span class="sd">            e.g. &#39;./result/pict.png&#39;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">num</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">dic_di</span><span class="p">)</span>
+        <span class="n">color_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">cm</span><span class="o">.</span><span class="n">winter_r</span><span class="p">(</span><span class="n">i</span><span class="o">/</span><span class="n">num</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num</span><span class="p">)]</span>
+        <span class="n">ymax</span> <span class="o">=</span> <span class="mf">1.0</span>
+
+        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;DI Score:&quot;</span><span class="o">+</span><span class="n">target_attr</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;DI&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">ymax</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Attribute value&#39;</span><span class="p">)</span>
+
+        <span class="n">labels</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">dic_di</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span>
+        <span class="n">vals</span> <span class="o">=</span> <span class="p">[</span><span class="n">val</span> <span class="k">if</span> <span class="n">val</span> <span class="o">&lt;=</span> <span class="n">ymax</span> <span class="k">else</span> <span class="n">ymax</span> <span class="k">for</span> <span class="n">val</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">dic_di</span><span class="o">.</span><span class="n">values</span><span class="p">())]</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span><span class="n">labels</span><span class="p">,</span> <span class="n">vals</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color_list</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">labels</span><span class="p">,</span> <span class="n">dic_di</span><span class="o">.</span><span class="n">values</span><span class="p">(),</span> <span class="n">vals</span><span class="p">):</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">val</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;bottom&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">filename</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;png&quot;</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
+
+        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="DisparateImpact.calc_privilege_group"><a class="viewcode-back" href="../../../metrics_pak.html#isf.metrics.disparate_impact.DisparateImpact.calc_privilege_group">[docs]</a>    <span class="k">def</span> <span class="nf">calc_privilege_group</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">,</span> <span class="n">protected_attr_info</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Split into privileged and non-privileged groups</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        df : DataFrame</span>
+<span class="sd">            DataFrame containing sensitive attribute and label</span>
+<span class="sd">        protected_attr_info : dictionary</span>
+<span class="sd">            Privileged group definition (sensitive attribute name : attribute values)</span>
+<span class="sd">            e.g. {&#39;female&#39;:1.0}</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        privilege_group : DataFrame</span>
+<span class="sd">            Privileged group</span>
+<span class="sd">        non_privilege_group : DataFrame</span>
+<span class="sd">            Non-privileged group</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">privilege_group</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">protected_attr_info</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">privilege_group</span> <span class="o">=</span> <span class="n">privilege_group</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">privilege_group</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">==</span> <span class="n">val</span><span class="p">)]</span>
+
+        <span class="n">non_privilege_group</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">privilege_group</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">privilege_group</span><span class="p">,</span> <span class="n">non_privilege_group</span></div></div>
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">Intersectional Fairness v0.1.0
+ documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">isf.metrics.disparate_impact</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2023, Fujitsu Limited.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.1.1.
+    </div>
+  </body>
+</html>

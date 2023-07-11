@@ -1,0 +1,7 @@
+isf.metrics.disparate_impact
+============================
+
+.. automodule:: isf.metrics.disparate_impact
+   :members:
+   :undoc-members:
+   :show-inheritance:
