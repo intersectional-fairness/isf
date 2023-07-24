@@ -1,7 +1,7 @@
 # verfied to work for Python 3.7.13
 numpy
 pandas
-sklearn
+scikit-learn
 tempeh
 matplotlib
 tensorflow==1.15.5
