@@ -20,8 +20,11 @@ from pandas.testing import assert_frame_equal
 
 from aif360.datasets import CompasDataset
 
+from logging import CRITICAL, getLogger
+
 from isf.core.intersectional_fairness import IntersectionalFairness
 from isf.utils.common import classify, output_subgroup_metrics, convert_labels, create_multi_group_label
+from isf.utils.stream import MuteStdout
 
 MODEL_ANSWER_PATH = './tests/result/'
 
@@ -48,6 +51,8 @@ class TestStringMethods(unittest.TestCase):
         return result_singleattr_bias, result_combattr_bias
 
     def setUp(self):
+        getLogger().setLevel(CRITICAL)
+
         # load test dataset
         self.dataset = CompasDataset()
         convert_labels(self.dataset)
@@ -59,9 +64,10 @@ class TestStringMethods(unittest.TestCase):
         s_metrics = 'DemographicParity'
 
         # test
-        ID = IntersectionalFairness(s_algorithm, s_metrics)
-        ID.fit(self.ds_train)
-        ds_predicted = ID.predict(self.ds_test)
+        with MuteStdout():
+            ID = IntersectionalFairness(s_algorithm, s_metrics)
+            ID.fit(self.ds_train)
+            ds_predicted = ID.predict(self.ds_test)
 
         group_protected_attrs, label_unique_nums = create_multi_group_label(self.dataset)
         g_metrics, sg_metrics = output_subgroup_metrics(self.ds_test, ds_predicted, group_protected_attrs)
