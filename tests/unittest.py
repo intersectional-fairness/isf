@@ -24,7 +24,7 @@ from logging import CRITICAL, getLogger
 
 from isf.core.intersectional_fairness import IntersectionalFairness
 from isf.utils.common import classify, output_subgroup_metrics, convert_labels, create_multi_group_label
-from isf.utils.stream import MuteStdout
+from tests.stream import MuteStdout
 
 MODEL_ANSWER_PATH = './tests/result/'
 
