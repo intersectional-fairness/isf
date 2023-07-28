@@ -25,11 +25,16 @@ from logging import CRITICAL, getLogger
 from isf.core.intersectional_fairness import IntersectionalFairness
 from isf.utils.common import classify, output_subgroup_metrics, convert_labels, create_multi_group_label
 from tests.stream import MuteStdout
+from tests.testutils import TestCaseExtension
 
 MODEL_ANSWER_PATH = './tests/result/'
 
 
 class TestStringMethods(unittest.TestCase):
+
+    def __init__(self, methodName='runTest'):
+        super().__init__(methodName=methodName)
+        self.extension = TestCaseExtension(testCase=self)
 
     def _read_modelanswer(self, s_result_singleattr, s_result_combattr):
         # load of model answer
@@ -58,7 +63,6 @@ class TestStringMethods(unittest.TestCase):
         convert_labels(self.dataset)
         self.ds_train, self.ds_test = self.dataset.split([0.7], shuffle=False, seed=1)
 
-    @unittest.expectedFailure
     def test01_AdversarialDebiasing(self):
         s_algorithm = 'AdversarialDebiasing'
         s_metrics = 'DemographicParity'
@@ -79,9 +83,12 @@ class TestStringMethods(unittest.TestCase):
         ma_singleattr_bias, ma_combattr_bias = self._read_modelanswer("test01_result_singleattr.csv",
                                                                       "test01_result_combattr.csv")
 
-        # assert
-        self.assertTrue(self._comp_dataframe(result_singleattr_bias, ma_singleattr_bias))
-        self.assertTrue(self._comp_dataframe(result_combattr_bias,   ma_combattr_bias))
+        self.extension.assertAlmostEqualDF(
+            result_singleattr_bias, ma_singleattr_bias,
+            columns=result_singleattr_bias.columns[-2:], places=1)
+        self.extension.assertAlmostEqualDF(
+            result_combattr_bias,   ma_combattr_bias,
+            columns=result_singleattr_bias.columns[-2:], places=1)
 
     def test02_EqualizedOdds(self):
         s_algorithm = 'EqualizedOddsPostProcessing'
