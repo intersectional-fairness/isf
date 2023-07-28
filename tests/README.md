@@ -22,5 +22,5 @@
     Example commands.
     ```
     cd <isf root dir>
-    python3 -m unittest tests.unittest
+    python3 -m tests.unit_test
     ```
