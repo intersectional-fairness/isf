@@ -18,16 +18,18 @@ import unittest
 import pandas as pd
 from pandas.testing import assert_frame_equal
 
-from aif360.datasets import CompasDataset
-
 from logging import CRITICAL, getLogger
+from os import environ
+# Suppress warnings that tensorflow emits
+environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
+
+from aif360.datasets import CompasDataset
 
 from isf.core.intersectional_fairness import IntersectionalFairness
 from isf.utils.common import classify, output_subgroup_metrics, convert_labels, create_multi_group_label
 from tests.stream import MuteStdout
 from tests.testutils import TestCaseExtension
-import tensorflow as tf
-tf.compat.v1.disable_eager_execution()
 
 
 MODEL_ANSWER_PATH = './tests/result/'
