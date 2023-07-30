@@ -4,9 +4,10 @@ pandas
 scikit-learn
 tempeh
 matplotlib
-tensorflow==1.15.5
-protobuf==3.20.0
+tensorflow
+protobuf
 fairlearn
 cvxpy
 aif360==0.4.0
+#aif360
 seaborn

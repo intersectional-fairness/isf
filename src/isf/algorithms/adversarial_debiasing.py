@@ -72,7 +72,7 @@ class AdversarialDebiasing(InProcessing):
         ikey = ds_test.protected_attribute_names[0]
         priv_g = [{ikey: ds_test.privileged_protected_attributes[0]}]
         upriv_g = [{ikey: ds_test.unprivileged_protected_attributes[0]}]
-        sess = tf.Session()
+        sess = tf.compat.v1.Session()
         model = AD(
             privileged_groups=priv_g,
             unprivileged_groups=upriv_g,
@@ -82,7 +82,7 @@ class AdversarialDebiasing(InProcessing):
         model.fit(self.ds_train)
         ds_predict = model.predict(ds_test)
         sess.close()
-        tf.reset_default_graph()
+        tf.compat.v1.reset_default_graph()
         return ds_predict
 
     def bias_predict(self, ds_train):
@@ -102,7 +102,7 @@ class AdversarialDebiasing(InProcessing):
         ikey = ds_train.protected_attribute_names[0]
         priv_g = [{ikey: ds_train.privileged_protected_attributes[0]}]
         upriv_g = [{ikey: ds_train.unprivileged_protected_attributes[0]}]
-        sess = tf.Session()
+        sess = tf.compat.v1.Session()
         model = AD(
             privileged_groups=priv_g,
             unprivileged_groups=upriv_g,
@@ -114,5 +114,5 @@ class AdversarialDebiasing(InProcessing):
         model.fit(ds_train)
         ds_predict = model.predict(ds_train)
         sess.close()
-        tf.reset_default_graph()
+        tf.compat.v1.reset_default_graph()
         return ds_predict
