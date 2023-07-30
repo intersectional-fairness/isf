@@ -14,11 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import tensorflow as tf
 
 from aif360.algorithms.inprocessing.adversarial_debiasing import AdversarialDebiasing as AD
+import tensorflow as tf
 
 from isf.algorithms.base.inprocessing import InProcessing
+
+
+tf.compat.v1.disable_eager_execution()
 
 
 class AdversarialDebiasing(InProcessing):
