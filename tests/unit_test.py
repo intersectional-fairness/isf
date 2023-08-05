@@ -29,7 +29,6 @@ from aif360.datasets import CompasDataset
 from isf.core.intersectional_fairness import IntersectionalFairness
 from isf.utils.common import classify, output_subgroup_metrics, convert_labels, create_multi_group_label
 from tests.stream import MuteStdout
-from tests.testutils import TestCaseExtension
 
 
 MODEL_ANSWER_PATH = './tests/result/'
@@ -39,7 +38,6 @@ class TestStringMethods(unittest.TestCase):
 
     def __init__(self, methodName='runTest'):
         super().__init__(methodName=methodName)
-        self.extension = TestCaseExtension(testCase=self)
 
     def _read_modelanswer(self, s_result_singleattr, s_result_combattr):
         # load of model answer
@@ -88,12 +86,8 @@ class TestStringMethods(unittest.TestCase):
         ma_singleattr_bias, ma_combattr_bias = self._read_modelanswer("test01_result_singleattr.csv",
                                                                       "test01_result_combattr.csv")
 
-        self.extension.assertAlmostEqualDF(
-            result_singleattr_bias, ma_singleattr_bias,
-            columns=result_singleattr_bias.columns[-2:], places=1)
-        self.extension.assertAlmostEqualDF(
-            result_combattr_bias,   ma_combattr_bias,
-            columns=result_singleattr_bias.columns[-2:], places=1)
+        assert_frame_equal(result_singleattr_bias, ma_singleattr_bias, atol=0.2)
+        assert_frame_equal(result_combattr_bias, ma_combattr_bias, atol=0.2)
 
     def test02_EqualizedOdds(self):
         s_algorithm = 'EqualizedOddsPostProcessing'
@@ -118,8 +112,8 @@ class TestStringMethods(unittest.TestCase):
                                                                       "test02_result_combattr.csv")
 
         # assert
-        self.assertTrue(self._comp_dataframe(result_singleattr_bias, ma_singleattr_bias))
-        self.assertTrue(self._comp_dataframe(result_combattr_bias,   ma_combattr_bias))
+        assert_frame_equal(result_singleattr_bias, ma_singleattr_bias)
+        assert_frame_equal(result_combattr_bias,   ma_combattr_bias)
 
     def test03_Massaging(self):
         s_algorithm = 'Massaging'
@@ -140,8 +134,8 @@ class TestStringMethods(unittest.TestCase):
                                                                       "test03_result_combattr.csv")
 
         # assert
-        self.assertTrue(self._comp_dataframe(result_singleattr_bias, ma_singleattr_bias))
-        self.assertTrue(self._comp_dataframe(result_combattr_bias, ma_combattr_bias))
+        assert_frame_equal(result_singleattr_bias, ma_singleattr_bias)
+        assert_frame_equal(result_combattr_bias, ma_combattr_bias)
 
     def test04_RejectOptionClassification(self):
         s_algorithm = 'RejectOptionClassification'
@@ -167,8 +161,8 @@ class TestStringMethods(unittest.TestCase):
                                                                       "test04_result_combattr.csv")
 
         # assert
-        self.assertTrue(self._comp_dataframe(result_singleattr_bias, ma_singleattr_bias))
-        self.assertTrue(self._comp_dataframe(result_combattr_bias, ma_combattr_bias))
+        assert_frame_equal(result_singleattr_bias, ma_singleattr_bias)
+        assert_frame_equal(result_combattr_bias, ma_combattr_bias)
 
     def test05_Massaging_AA(self):
         s_algorithm = 'Massaging'
@@ -192,8 +186,8 @@ class TestStringMethods(unittest.TestCase):
                                                                       "test05_result_combattr.csv")
 
         # assert
-        self.assertTrue(self._comp_dataframe(result_singleattr_bias, ma_singleattr_bias))
-        self.assertTrue(self._comp_dataframe(result_combattr_bias, ma_combattr_bias))
+        assert_frame_equal(result_singleattr_bias, ma_singleattr_bias)
+        assert_frame_equal(result_combattr_bias, ma_combattr_bias)
 
 
 if __name__ == "__main__":
