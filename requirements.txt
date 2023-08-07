@@ -1,13 +1,6 @@
-# verfied to work for Python 3.7.13
-numpy
-pandas
-scikit-learn
-tempeh
-matplotlib
-tensorflow
-protobuf
+aif360[LawSchoolGPA]
 fairlearn
-cvxpy
-aif360==0.4.0
-#aif360
+scikit-learn < 1.2.0
+tensorflow
 seaborn
+cvxpy
