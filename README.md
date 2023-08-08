@@ -9,7 +9,7 @@ Approaches applicable to ISF are pre-, in-, and post-processing. For now, ISF su
 
 | Item      | Version |
 | ------- | -------------- |
-| Python  | 3.7 |
+| Python  | 3.7 - 3.11|
 
 
 ## Setup
