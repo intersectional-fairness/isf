@@ -1,0 +1,66 @@
+2a3
+> import math
+26c27
+<                 metric_ub=0.05, metric_lb=-0.05):
+---
+>                 metric_ub=0.05, metric_lb=-0.05, accuracy_metric_name="Balanced Accuracy"):
+53c54,55
+<             metric_name=metric_name)
+---
+>             metric_name=metric_name,
+>             accuracy_metric_name=accuracy_metric_name)
+57c59,60
+<                            "Equal opportunity difference"]
+---
+>                            "Equal opportunity difference",
+>                            "F1 difference"]
+68a72
+>         self.accuracy_metric_name = accuracy_metric_name
+142,144c146,160
+<                 # Balanced accuracy and fairness metric computations
+<                 balanced_acc_arr[cnt] = 0.5*(classified_transf_metric.true_positive_rate()\
+<                                        +classified_transf_metric.true_negative_rate())
+---
+>                 if self.accuracy_metric_name == 'F1':
+>                     precision = classified_transf_metric.precision()
+>                     recall = classified_transf_metric.recall()
+>                     if (precision + recall) != 0:
+>                         f1 = (2 * precision * recall) / (precision + recall)
+>                         if math.isnan(f1):
+>                             f1 = 0
+>                     else:
+>                         f1 = 0
+>                     balanced_acc_arr[cnt] = f1
+>                 else:
+>                     # Balanced accuracy and fairness metric computations
+>                     balanced_acc_arr[cnt] = 0.5*(classified_transf_metric.true_positive_rate()\
+>                                            +classified_transf_metric.true_negative_rate())
+> 
+150a167,186
+>                 elif self.metric_name == "F1 difference":
+>                     precision_priv = classified_transf_metric.precision(privileged=True)
+>                     recall_priv = classified_transf_metric.recall(privileged=True)
+>                     if (precision_priv + recall_priv) != 0:
+>                         f1_priv = 2 * precision_priv * recall_priv / (precision_priv + recall_priv)
+>                         if math.isnan(f1_priv):
+>                             f1_priv = 0
+>                     else:
+>                         f1_priv = 0
+>                     precision_unpriv = classified_transf_metric.precision(privileged=False)
+>                     recall_unpriv = classified_transf_metric.recall(privileged=False)
+>                     if (precision_unpriv + recall_unpriv) != 0:
+>                         f1_unpriv = 2 * precision_unpriv * recall_unpriv / (precision_unpriv + recall_unpriv)
+>                         if math.isnan(f1_unpriv):
+>                             f1_unpriv = 0
+>                     else:
+>                         f1_unpriv = 0
+>                     fair_metric_arr[cnt] = f1_priv - f1_unpriv
+>                     # if fair_metric_arr[cnt] >= self.metric_lb and fair_metric_arr[cnt] <= self.metric_ub:
+>                     #     print(str(f1) + ', ' + str(f1_priv) + ', ' + str(f1_unpriv))
+158a195
+>             # print('best f1: ' + str(balanced_acc_arr[rel_inds]))
+244a282,284
+> 
+> def replacement_check():
+>     return 0
+\ ファイル末尾に改行がありません
