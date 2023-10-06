@@ -1,0 +1,30 @@
+258a259
+>         dchk = 0
+261a263
+>             #print('priv:{} unpriv:{}'.format(priv, unpriv))
+264,266c266,272
+<                 raise ValueError("'privileged_protected_attributes' and "
+<                     "'unprivileged_protected_attributes' should not share any "
+<                     "common elements:\n\tBoth contain {} for feature {}".format(
+---
+>                 #raise ValueError("'privileged_protected_attributes' and "
+>                 #    "'unprivileged_protected_attributes' should not share any "
+>                 #    "common elements:\n\tBoth contain {} for feature {}".format(
+>                 if len(self.privileged_protected_attributes) == 1:
+>                     raise ValueError("'privileged_protected_attributes' and "
+>                         "'unprivileged_protected_attributes' should not share any "
+>                         "common elements:\n\tBoth contain {} for feature {}".format(
+267a274,275
+>                 else:
+>                     dchk += 1
+280a289,293
+>         if dchk == len(self.privileged_protected_attributes):
+>             raise ValueError("'privileged_protected_attributes' and "
+>                 "'unprivileged_protected_attributes' should not share any "
+>                 "common elements:\n\tBoth contain {} for feature {}".format(
+>                 list(priv & unpriv), self.protected_attribute_names[i]))
+573a587,589
+> 
+> def replacement_check():
+>     return 0
+\ ファイル末尾に改行がありません
