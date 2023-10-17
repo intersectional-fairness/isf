@@ -11,7 +11,7 @@ EOF
 patch_dir=$(dirname $0)
 
 # Download and store datasets necessary for testing
-#  parameter
+#  Parameter:
 #    - $1: directory to store the datasets
 prepare_test() {
     d="$1"
