@@ -1,3 +1,6 @@
+# This file is kept only for backward compatibility.
+# Refer to install_requires in [options] section in setup.cfg
+for the list of required packages.
 aif360[LawSchoolGPA]
 fairlearn
 scikit-learn < 1.2.0

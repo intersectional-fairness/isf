@@ -27,10 +27,16 @@ The patch contents are as follows.
 
 | file    | method/class | fixes |
 | ------- | -------------- | -------------- |
-| datasets/structured_dataset.py | validate_dataset | * Changed the generating condition of 'Value Error' condition to support multiple protection attributes |
+| datasets/structured_dataset.py | validate_dataset | * Changed the generating condition of 'Value Error' condition to support multiple protected attributes |
 | algorithms/postprocessing/<br/>reject_option_classification.py | RejectOptionClassification | * Added "F1 difference" to corresponding metric<br/>* Defined "Balanced Accuracy" as default value for accuracy_metric_name |
 
-patch application command
+To apply the patches, run the following command:
+
+```bash
+apply-patch-to-aif360-for-isf
+```
+
+The above command equivalents to the following command. So you can apply the patches with the following command instead of the above:
 
 ```bash
 patch {aif360 installed directory path}/datasets/structured_dataset.py structured_dataset.patch
