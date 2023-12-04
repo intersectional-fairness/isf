@@ -46,7 +46,7 @@ patch {aif360 installed directory path}/algorithms/postprocessing/reject_option_
 ## Run the Examples
 The `examples` directory contains a diverse collection of jupyter notebooks that use Intersectional Fairness in various ways.  
 
-If you use open data supported by AIF360, you need to download the datasets and place them in their respective directories as described in [aif360/data/README.md](aif360/data/README.md).
+If you use open data supported by AIF360, you need to download the datasets and place them in their respective directories as described in [aif360/data/README.md in AIF360](https://github.com/Trusted-AI/AIF360/blob/master/aif360/data/README.md).
 
 ## Citing Intersectional Fairness
 A technical description of Intersectional Fairness is available in this [paper](https://link.springer.com/chapter/10.1007/978-3-030-87687-6_5) (or this [preliminary version](https://arxiv.org/abs/2010.13494)).  
