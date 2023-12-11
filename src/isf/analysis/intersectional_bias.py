@@ -24,7 +24,11 @@ from isf.metrics.disparate_impact import DisparateImpact
 from isf.utils.common import create_multi_group_label
 
 
-def calc_intersectionalbias(dataset, metric="DispareteImpact"):
+METRIC_DI = "DisparateImpact"
+METRIC_DI_MISSPELLED = "DispareteImpact"
+
+
+def calc_intersectionalbias(dataset, metric=METRIC_DI):
     """
     Calculate intersectional bias(DisparateImpact) by more than one sensitive attributes
 
@@ -35,7 +39,7 @@ def calc_intersectionalbias(dataset, metric="DispareteImpact"):
 
     metric : str
         Fairness metric name
-        ["DispareteImpact"]
+        ["DisparateImpact"]
 
     Returns
     -------
@@ -46,7 +50,7 @@ def calc_intersectionalbias(dataset, metric="DispareteImpact"):
     df = dataset.convert_to_dataframe()[0]
     label_info = {dataset.label_names[0]: dataset.favorable_label}
 
-    if metric == "DispareteImpact":
+    if metric == METRIC_DI or metric == METRIC_DI_MISSPELLED:
         fs = DisparateImpact()
     else:
         raise ValueError("metric name not in the list of allowed metrics")
@@ -66,7 +70,7 @@ def calc_intersectionalbias(dataset, metric="DispareteImpact"):
 
 
 def plot_intersectionalbias_compare(ds_bef, ds_aft, vmax=1, vmin=0, center=0,
-                                    metric="DispareteImpact",
+                                    metric=METRIC_DI,
                                     title={"right": "before", "left": "after"},
                                     filename=None):
     """
@@ -83,7 +87,7 @@ def plot_intersectionalbias_compare(ds_bef, ds_aft, vmax=1, vmin=0, center=0,
         e.g. "./result/pict.png"
     metric : str
         Fairness metric name
-        ["DispareteImpact"]
+        ["DisparateImpact"]
     title : dictonary, optional
         Graph title (right figure, left figure)
     """
@@ -109,7 +113,7 @@ def plot_intersectionalbias_compare(ds_bef, ds_aft, vmax=1, vmin=0, center=0,
     plt.show()
 
 
-def calc_intersectionalbias_matrix(dataset, metric="DispareteImpact"):
+def calc_intersectionalbias_matrix(dataset, metric=METRIC_DI):
     """
     Comparison drawing of intersectional bias in heat map
 
@@ -119,7 +123,7 @@ def calc_intersectionalbias_matrix(dataset, metric="DispareteImpact"):
         Dataset containing two sensitive attributes
     metric : str
         Fairness metric name
-        ["DispareteImpact"]
+        ["DisparateImpact"]
 
     Returns
     -------
@@ -132,7 +136,7 @@ def calc_intersectionalbias_matrix(dataset, metric="DispareteImpact"):
     if len(protect_attr) != 2:
         raise ValueError("specify 2 sensitive attributes.")
 
-    if metric == "DispareteImpact":
+    if metric == METRIC_DI or metric == METRIC_DI_MISSPELLED:
         fs = DisparateImpact()
     else:
         raise ValueError("metric name not in the list of allowed metrics")
