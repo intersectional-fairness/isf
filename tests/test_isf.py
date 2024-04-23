@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import unittest
+from typing import NamedTuple
 import pandas as pd
 from pandas.testing import assert_frame_equal
 
@@ -23,6 +23,8 @@ from os import environ
 # Suppress warnings that tensorflow emits
 environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
+
+import pytest
 
 from aif360.datasets import CompasDataset
 
@@ -34,11 +36,13 @@ from tests.stream import MuteStdout
 MODEL_ANSWER_PATH = './tests/result/'
 
 
-class TestStringMethods(unittest.TestCase):
+class _DataSet(NamedTuple):
+    entire: CompasDataset
+    train: CompasDataset
+    test: CompasDataset
 
-    def __init__(self, methodName='runTest'):
-        super().__init__(methodName=methodName)
 
+class TestForISF:
     def _read_modelanswer(self, s_result_singleattr, s_result_combattr):
         # load of model answer
         ma_singleattr_bias = pd.read_csv(MODEL_ANSWER_PATH + s_result_singleattr, index_col=0)
@@ -58,26 +62,30 @@ class TestStringMethods(unittest.TestCase):
         result_combattr_bias = df_combattr[['group', 'base_rate', 'selection_rate', 'Balanced_Accuracy']]
         return result_singleattr_bias, result_combattr_bias
 
+    @pytest.fixture(scope="class")
     def setUp(self):
         getLogger().setLevel(CRITICAL)
 
+    @pytest.fixture(scope="class")
+    def dataset(self) -> _DataSet:
         # load test dataset
-        self.dataset = CompasDataset()
-        convert_labels(self.dataset)
-        self.ds_train, self.ds_test = self.dataset.split([0.7], shuffle=False, seed=1)
+        entire = CompasDataset()
+        convert_labels(entire)
+        train, test = entire.split([0.7], shuffle=False, seed=1)
+        return _DataSet(entire=entire, train=train, test=test)
 
-    def test01_AdversarialDebiasing(self):
+    def test01_AdversarialDebiasing(self, dataset: _DataSet):
         s_algorithm = 'AdversarialDebiasing'
         s_metrics = 'DemographicParity'
 
         # test
         with MuteStdout():
             ID = IntersectionalFairness(s_algorithm, s_metrics)
-            ID.fit(self.ds_train)
-            ds_predicted = ID.predict(self.ds_test)
+            ID.fit(dataset.train)
+            ds_predicted = ID.predict(dataset.test)
 
-        group_protected_attrs, label_unique_nums = create_multi_group_label(self.dataset)
-        g_metrics, sg_metrics = output_subgroup_metrics(self.ds_test, ds_predicted, group_protected_attrs)
+        group_protected_attrs, label_unique_nums = create_multi_group_label(dataset.entire)
+        g_metrics, sg_metrics = output_subgroup_metrics(dataset.test, ds_predicted, group_protected_attrs)
 
         # pickup
         result_singleattr_bias, result_combattr_bias = self._pickup_result(g_metrics, sg_metrics)
@@ -89,20 +97,20 @@ class TestStringMethods(unittest.TestCase):
         assert_frame_equal(result_singleattr_bias, ma_singleattr_bias, atol=0.2)
         assert_frame_equal(result_combattr_bias, ma_combattr_bias, atol=0.2)
 
-    def test02_EqualizedOdds(self):
+    def test02_EqualizedOdds(self, dataset: _DataSet):
         s_algorithm = 'EqualizedOddsPostProcessing'
         s_metrics = 'EqualizedOdds'
 
         # test
-        ds_train_classified, threshold, _ = classify(self.ds_train, self.ds_train)
-        ds_test_classified, _, _ = classify(self.ds_train, self.ds_test, threshold=threshold)
+        ds_train_classified, threshold, _ = classify(dataset.train, dataset.train)
+        ds_test_classified, _, _ = classify(dataset.train, dataset.test, threshold=threshold)
 
         ID = IntersectionalFairness(s_algorithm, s_metrics)
-        ID.fit(self.ds_train, dataset_predicted=ds_train_classified, options={'threshold': threshold})
+        ID.fit(dataset.train, dataset_predicted=ds_train_classified, options={'threshold': threshold})
         ds_predicted = ID.predict(ds_test_classified)
 
-        group_protected_attrs, label_unique_nums = create_multi_group_label(self.dataset)
-        g_metrics, sg_metrics = output_subgroup_metrics(self.ds_test, ds_predicted, group_protected_attrs)
+        group_protected_attrs, label_unique_nums = create_multi_group_label(dataset.entire)
+        g_metrics, sg_metrics = output_subgroup_metrics(dataset.test, ds_predicted, group_protected_attrs)
 
         # pickup
         result_singleattr_bias, result_combattr_bias = self._pickup_result(g_metrics, sg_metrics)
@@ -115,16 +123,16 @@ class TestStringMethods(unittest.TestCase):
         assert_frame_equal(result_singleattr_bias, ma_singleattr_bias)
         assert_frame_equal(result_combattr_bias,   ma_combattr_bias)
 
-    def test03_Massaging(self):
+    def test03_Massaging(self, dataset: _DataSet):
         s_algorithm = 'Massaging'
         s_metrics = 'DemographicParity'
 
         ID = IntersectionalFairness(s_algorithm, s_metrics)
-        ID.fit(self.ds_train)
-        ds_predicted = ID.transform(self.ds_train)
+        ID.fit(dataset.train)
+        ds_predicted = ID.transform(dataset.train)
 
-        group_protected_attrs, label_unique_nums = create_multi_group_label(self.dataset)
-        g_metrics, sg_metrics = output_subgroup_metrics(self.ds_train, ds_predicted, group_protected_attrs)
+        group_protected_attrs, label_unique_nums = create_multi_group_label(dataset.entire)
+        g_metrics, sg_metrics = output_subgroup_metrics(dataset.train, ds_predicted, group_protected_attrs)
 
         # pickup
         result_singleattr_bias, result_combattr_bias = self._pickup_result(g_metrics, sg_metrics)
@@ -137,21 +145,21 @@ class TestStringMethods(unittest.TestCase):
         assert_frame_equal(result_singleattr_bias, ma_singleattr_bias)
         assert_frame_equal(result_combattr_bias, ma_combattr_bias)
 
-    def test04_RejectOptionClassification(self):
+    def test04_RejectOptionClassification(self, dataset: _DataSet):
         s_algorithm = 'RejectOptionClassification'
         s_metrics = 'F1Parity'
 
-        ds_train_classified, threshold, _ = classify(self.ds_train, self.ds_train)
-        ds_test_classified, _, _ = classify(self.ds_train, self.ds_test, threshold=threshold)
+        ds_train_classified, threshold, _ = classify(dataset.train, dataset.train)
+        ds_test_classified, _, _ = classify(dataset.train, dataset.test, threshold=threshold)
 
-        group_protected_attrs, label_unique_nums = create_multi_group_label(self.dataset)
+        group_protected_attrs, label_unique_nums = create_multi_group_label(dataset.entire)
 
         ID = IntersectionalFairness(s_algorithm, s_metrics,
                                     accuracy_metric='F1', options={'accuracy_metric_name': 'F1', 'metric_ub': 0.2, 'metric_lb': -0.2})
-        ID.fit(self.ds_train, dataset_predicted=ds_train_classified)
+        ID.fit(dataset.train, dataset_predicted=ds_train_classified)
         ds_predicted = ID.predict(ds_test_classified)
 
-        g_metrics, sg_metrics = output_subgroup_metrics(self.ds_test, ds_predicted, group_protected_attrs)
+        g_metrics, sg_metrics = output_subgroup_metrics(dataset.test, ds_predicted, group_protected_attrs)
 
         # pickup
         result_singleattr_bias, result_combattr_bias = self._pickup_result(g_metrics, sg_metrics)
@@ -164,7 +172,7 @@ class TestStringMethods(unittest.TestCase):
         assert_frame_equal(result_singleattr_bias, ma_singleattr_bias)
         assert_frame_equal(result_combattr_bias, ma_combattr_bias)
 
-    def test05_Massaging_AA(self):
+    def test05_Massaging_AA(self, dataset: _DataSet):
         s_algorithm = 'Massaging'
         s_metrics = 'DemographicParity'
 
@@ -172,11 +180,11 @@ class TestStringMethods(unittest.TestCase):
 
         ID = IntersectionalFairness(s_algorithm, s_metrics,
                                     debiasing_conditions=debiasing_conditions, instruct_debiasing=True)
-        ID.fit(self.ds_train)
-        ds_predicted = ID.transform(self.ds_train)
+        ID.fit(dataset.train)
+        ds_predicted = ID.transform(dataset.train)
 
-        group_protected_attrs, _ = create_multi_group_label(self.dataset)
-        g_metrics, sg_metrics = output_subgroup_metrics(self.ds_train, ds_predicted, group_protected_attrs)
+        group_protected_attrs, _ = create_multi_group_label(dataset.entire)
+        g_metrics, sg_metrics = output_subgroup_metrics(dataset.train, ds_predicted, group_protected_attrs)
 
         # pickup
         result_singleattr_bias, result_combattr_bias = self._pickup_result(g_metrics, sg_metrics)
@@ -188,7 +196,3 @@ class TestStringMethods(unittest.TestCase):
         # assert
         assert_frame_equal(result_singleattr_bias, ma_singleattr_bias)
         assert_frame_equal(result_combattr_bias, ma_combattr_bias)
-
-
-if __name__ == "__main__":
-    unittest.main()
