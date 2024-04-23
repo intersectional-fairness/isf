@@ -49,13 +49,6 @@ class TestForISF:
         ma_combattr_bias = pd.read_csv(MODEL_ANSWER_PATH + s_result_combattr, index_col=0)
         return ma_singleattr_bias, ma_combattr_bias
 
-    def _comp_dataframe(self, df1, df2):
-        try:
-            assert_frame_equal(df1, df2)
-        except AssertionError:
-            return False
-        return True
-
     def _pickup_result(self, df_singleattr, df_combattr):
         # load of model answer
         result_singleattr_bias = df_singleattr[['group', 'base_rate', 'selection_rate', 'Balanced_Accuracy']]
@@ -91,8 +84,9 @@ class TestForISF:
         result_singleattr_bias, result_combattr_bias = self._pickup_result(g_metrics, sg_metrics)
 
         # load of model answer
-        ma_singleattr_bias, ma_combattr_bias = self._read_modelanswer("test01_result_singleattr.csv",
-                                                                      "test01_result_combattr.csv")
+        ma_singleattr_bias, ma_combattr_bias = self._read_modelanswer(
+            "test01_result_singleattr.csv",
+            "test01_result_combattr.csv")
 
         assert_frame_equal(result_singleattr_bias, ma_singleattr_bias, atol=0.2)
         assert_frame_equal(result_combattr_bias, ma_combattr_bias, atol=0.2)
@@ -116,8 +110,9 @@ class TestForISF:
         result_singleattr_bias, result_combattr_bias = self._pickup_result(g_metrics, sg_metrics)
 
         # load of model answer
-        ma_singleattr_bias, ma_combattr_bias = self._read_modelanswer("test02_result_singleattr.csv",
-                                                                      "test02_result_combattr.csv")
+        ma_singleattr_bias, ma_combattr_bias = self._read_modelanswer(
+            "test02_result_singleattr.csv",
+            "test02_result_combattr.csv")
 
         # assert
         assert_frame_equal(result_singleattr_bias, ma_singleattr_bias)
@@ -138,8 +133,9 @@ class TestForISF:
         result_singleattr_bias, result_combattr_bias = self._pickup_result(g_metrics, sg_metrics)
 
         # load of model answer
-        ma_singleattr_bias, ma_combattr_bias = self._read_modelanswer("test03_result_singleattr.csv",
-                                                                      "test03_result_combattr.csv")
+        ma_singleattr_bias, ma_combattr_bias = self._read_modelanswer(
+            "test03_result_singleattr.csv",
+            "test03_result_combattr.csv")
 
         # assert
         assert_frame_equal(result_singleattr_bias, ma_singleattr_bias)
@@ -165,8 +161,9 @@ class TestForISF:
         result_singleattr_bias, result_combattr_bias = self._pickup_result(g_metrics, sg_metrics)
 
         # load of model answer
-        ma_singleattr_bias, ma_combattr_bias = self._read_modelanswer("test04_result_singleattr.csv",
-                                                                      "test04_result_combattr.csv")
+        ma_singleattr_bias, ma_combattr_bias = self._read_modelanswer(
+            "test04_result_singleattr.csv",
+            "test04_result_combattr.csv")
 
         # assert
         assert_frame_equal(result_singleattr_bias, ma_singleattr_bias)
@@ -190,8 +187,9 @@ class TestForISF:
         result_singleattr_bias, result_combattr_bias = self._pickup_result(g_metrics, sg_metrics)
 
         # load of model answer
-        ma_singleattr_bias, ma_combattr_bias = self._read_modelanswer("test05_result_singleattr.csv",
-                                                                      "test05_result_combattr.csv")
+        ma_singleattr_bias, ma_combattr_bias = self._read_modelanswer(
+            "test05_result_singleattr.csv",
+            "test05_result_combattr.csv")
 
         # assert
         assert_frame_equal(result_singleattr_bias, ma_singleattr_bias)
