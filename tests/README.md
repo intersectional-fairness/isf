@@ -13,7 +13,7 @@
 
     Example commands.
     ```
-    !mv compas-scores-two-years.csv /usr/local/lib/python3.7/dist-packages/aif360/datasets/../data/raw/compas/compas-scores-two-years.csv
+    !mv compas-scores-two-years.csv $(python -c 'import aif360; print(aif360.__path__[0])')/data/raw/compas/compas-scores-two-years.csv
     ```
 
 ## 3. Run
