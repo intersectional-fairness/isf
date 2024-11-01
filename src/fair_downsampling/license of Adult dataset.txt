@@ -1,0 +1,18 @@
+The Adult dataset was downloaded from
+
+https://archive.ics.uci.edu/dataset/2/adult
+
+Creators
+Barry Becker
+Silicon Graphics
+
+Ronny Kohavi
+ronnyk@live.com
+Consultant/Stanford
+
+This dataset is licensed under a Creative Commons Attribution 4.0 International (CC BY 4.0) license.
+
+This allows for the sharing and adaptation of the datasets for any purpose, provided that the appropriate credit is given.
+
+The license is described here
+https://creativecommons.org/licenses/by/4.0/legalcode

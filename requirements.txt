@@ -7,3 +7,10 @@ scikit-learn < 1.2.0
 tensorflow
 seaborn
 cvxpy
+pandas
+numpy
+imblearn
+ucimlrepo
+xgboost
+matplotlib
+scipy
