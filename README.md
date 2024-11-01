@@ -112,7 +112,7 @@ original cluster distribution and data noise.
 
 For a tutorial on the algorithm and a use case, please, refer to the file
 
-https://github.com/intersectional-fairness/isf/tree/main/src/fair_oversampling/fair_oversampling_tutorial.ipynb
+[Tutorial](src/fair_oversampling/fair_oversampling_tutorial.ipynb)
 
 # Fair Downsampling
 
@@ -127,4 +127,4 @@ samples away from the class and group boundaries.
 
 For a tutorial on the algorithm and a use case, please, refer to the file
 
-https://github.com/intersectional-fairness/isf/tree/main/src/fair_downsampling/fair_downsampling_tutorial.ipynb
+[Tutorial](src/fair_downsampling/fair_downsampling_tutorial.ipynb)
