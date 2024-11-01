@@ -110,6 +110,10 @@ classifiers robust to overfitting. Moreover, we develop an interpolation method
 that can enhance the validity of generated synthetic data by considering the
 original cluster distribution and data noise.
 
+For a tutorial on the algorithm and a use case, please, refer to the file
+
+https://github.com/intersectional-fairness/isf/tree/main/src/fair_oversampling/fair_oversampling_tutorial.ipynb
+
 # Fair Downsampling
 
 ## Description
@@ -120,3 +124,7 @@ usually a trade-off between accuracy and fairness. Downsampling would often slig
 accuracy, but in most cases fairness deteriorates significantly. The proposed downsampling 
 algorithm considers both fairness and accuracy, while trying to avoid underfitting, by deleting 
 samples away from the class and group boundaries.
+
+For a tutorial on the algorithm and a use case, please, refer to the file
+
+https://github.com/intersectional-fairness/isf/tree/main/src/fair_downsampling/fair_downsampling_tutorial.ipynb
