@@ -3,7 +3,7 @@
 # for the list of required packages.
 aif360[LawSchoolGPA]
 fairlearn
-scikit-learn < 1.2.0
+scikit-learn
 tensorflow
 seaborn
 cvxpy
