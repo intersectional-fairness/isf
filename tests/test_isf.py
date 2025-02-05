@@ -20,6 +20,7 @@ from pandas.testing import assert_frame_equal
 
 from logging import CRITICAL, getLogger
 from os import environ
+from pathlib import Path
 # Suppress warnings that tensorflow emits
 environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -33,7 +34,8 @@ from isf.utils.common import classify, output_subgroup_metrics, convert_labels, 
 from tests.stream import MuteStdout
 
 
-MODEL_ANSWER_PATH = './tests/result/'
+here = Path(__file__).parent
+MODEL_ANSWER_PATH = f'{Path(here, "result")}/'
 
 
 class _DataSet(NamedTuple):
