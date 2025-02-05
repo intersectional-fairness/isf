@@ -774,9 +774,9 @@ class IntersectionalFairness():
         for i1 in range(len(dataset.instance_names)):
             idx = sortlist.get(dataset.instance_names[i1])
             if idx is not None:
-                disable_df['labels'][idx] = dataset.labels[i1]
-                disable_df['scores'][idx] = dataset.scores[i1]
-                disable_df['instance_weights'][idx] = dataset.instance_weights[i1]
+                disable_df.loc[idx, 'labels'] = dataset.labels[i1]
+                disable_df.loc[idx, 'scores'] = dataset.scores[i1]
+                disable_df.loc[idx, 'instance_weights'] = dataset.instance_weights[i1]
 
         return enable_ds, disable_df
 
