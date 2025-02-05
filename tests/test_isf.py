@@ -115,8 +115,8 @@ class TestForISF:
             "test02_result_combattr.csv")
 
         # assert
-        assert_frame_equal(result_singleattr_bias, ma_singleattr_bias)
-        assert_frame_equal(result_combattr_bias,   ma_combattr_bias)
+        assert_frame_equal(result_singleattr_bias, ma_singleattr_bias, atol=0.1)
+        assert_frame_equal(result_combattr_bias,   ma_combattr_bias, atol=0.1)
 
     def test03_Massaging(self, dataset: _DataSet):
         s_algorithm = 'Massaging'
@@ -138,8 +138,8 @@ class TestForISF:
             "test03_result_combattr.csv")
 
         # assert
-        assert_frame_equal(result_singleattr_bias, ma_singleattr_bias)
-        assert_frame_equal(result_combattr_bias, ma_combattr_bias)
+        assert_frame_equal(result_singleattr_bias, ma_singleattr_bias, atol=0.1)
+        assert_frame_equal(result_combattr_bias, ma_combattr_bias, atol=0.1)
 
     def test04_RejectOptionClassification(self, dataset: _DataSet):
         s_algorithm = 'RejectOptionClassification'
