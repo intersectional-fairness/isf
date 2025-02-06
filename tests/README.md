@@ -16,11 +16,19 @@
     !mv compas-scores-two-years.csv $(python -c 'import aif360; print(aif360.__path__[0])')/data/raw/compas/compas-scores-two-years.csv
     ```
 
-## 3. Run
+## 3. Install pytest
+    Install pytest if missing.
+
+    Example commands.
+    ```
+    pip install pytest
+    ```
+
+## 4. Run
     Run unittest.
 
     Example commands.
     ```
-    cd <isf root dir>
+    cd <isf root dir>/tests
     pytest
     ```

@@ -26,6 +26,7 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.tree import DecisionTreeClassifier
 
+# Note: Packages in ./requirements.txt have to be installed before running the test.
 from xgboost import XGBClassifier
 from imblearn.under_sampling import NearMiss #controlled under-sampling algorithm
 from ucimlrepo import fetch_ucirepo #for downloading datasets
@@ -34,9 +35,11 @@ import aif360
 from aif360 import metrics
 
 import fairdownsampling as fd
+from pathlib import Path
 
 #import adult dataset
-adult_dataset = pd.read_csv('adult.csv')
+here = Path(__file__).parent
+adult_dataset = pd.read_csv(Path(here, 'adult.csv'))
 
 #convert Adult dataset into AIF360 dataset format
 aif360_adult = aif360.datasets.BinaryLabelDataset(
