@@ -1,5 +1,10 @@
 # Intersectional Fairness (ISF)
 
+## Notice
+**This project is archived.**
+
+All the core codes have been migrated to [AIF360](https://github.com/Trusted-AI/AIF360). See [the related pull request](https://github.com/Trusted-AI/AIF360/pull/538) for details.
+
 ## Description
 Intersectional Fairness (ISF) is a bias detection and mitigation technology for intersectional bias, which combinations of multiple protected attributes cause.  
 ISF leverages the existing single-attribute bias mitigation methods to make a machine-learning model fair regarding intersectional bias.  
