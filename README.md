@@ -1,7 +1,7 @@
 # Intersectional Fairness (ISF)
 
 ## Notice
-**This project is archived.**
+**This project has been archived.**
 
 All the core codes have been migrated to [AIF360](https://github.com/Trusted-AI/AIF360). See [the related pull request](https://github.com/Trusted-AI/AIF360/pull/538) for details.
 
